@@ -8,25 +8,26 @@
 #ifndef INC_UTILS_H_
 #define INC_UTILS_H_
 
+
+#define RX_BUFFER_SIZE 5
 #define NUM_SENSORS 8
+#define BASE_SPEED 500
+#define SENSOR_THRESHOLD 450
 
-extern int sensor_weight[NUM_SENSORS];
 
-extern float Kp , Ki , Kd;
+#define MAX_I = 1;
+#define MIN_I = 0;
 
-extern uint16_t sensor_max[NUM_SENSORS];
-extern uint16_t sensor_min[NUM_SENSORS];
+
+
 
 
 float constrain_float(float x, float min, float max);
 int constrain_int(int x, int min, int max);
-void calibrateSensors(uint16_t sensor_raw[]);
-void processSensors(void);
 
 
-int get_line_error();
-int calculate_pid(int error);
-void drive_motors(int correction);
+
+
 
 
 

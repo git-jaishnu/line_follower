@@ -65,11 +65,14 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 
-extern volatile float KPID[3];
-extern uint16_t sensor_raw[NUM_SENSORS];
-extern uint16_t sensor_value[NUM_SENSORS];
-extern TIM_HandleTypeDef htim3;
+
+extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim1;
 extern UART_HandleTypeDef huart1;
+
+
+
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

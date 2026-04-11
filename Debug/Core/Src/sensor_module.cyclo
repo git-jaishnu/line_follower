@@ -1,0 +1,10 @@
+../Core/Src/sensor_module.c:23:6:Initialize_Sensor_Array	2
+../Core/Src/sensor_module.c:37:6:Sync_Sensors	1
+../Core/Src/sensor_module.c:51:6:autoCalibrate	6
+../Core/Src/sensor_module.c:83:6:processSensors	3
+../Core/Src/sensor_module.c:100:6:binarizeSensors	3
+../Core/Src/sensor_module.c:121:5:get_line_error	2
+../Core/Src/sensor_module.c:136:5:calculate_pid	5
+../Core/Src/sensor_module.c:160:5:count_active_sensors	3
+../Core/Src/sensor_module.c:170:5:detect_left	4
+../Core/Src/sensor_module.c:186:5:detect_right	4

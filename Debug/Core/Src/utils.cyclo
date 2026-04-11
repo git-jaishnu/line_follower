@@ -1,7 +1,2 @@
-../Core/Src/utils.c:22:6:calibrateSensors	6
-../Core/Src/utils.c:44:5:constrain_int	3
-../Core/Src/utils.c:51:7:constrain_float	3
-../Core/Src/utils.c:59:6:processSensors	3
-../Core/Src/utils.c:78:5:get_line_error	2
-../Core/Src/utils.c:93:5:calculate_pid	1
-../Core/Src/utils.c:103:6:drive_motors	1
+../Core/Src/utils.c:12:5:constrain_int	3
+../Core/Src/utils.c:19:7:constrain_float	3

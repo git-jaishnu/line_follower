@@ -8,7 +8,7 @@
 
 #include "stm32f4xx_hal.h"
 #include "utils.h"
-#include "main.h"
+
 #include "motor.h"
 #include "sensor_module.h"
 
@@ -27,6 +27,7 @@ void Initialize_Sensor_Array(Sensor_Array *sensor_array){
 		sensor_array->array[i].weight = sensor_array->weights[i];
 		sensor_array->array[i].adc_min = 0;
 		sensor_array->array[i].adc_max = 4095;
+		sensor_array->array[i].threshold = SENSOR_THRESHOLD;
 	}
 
 
@@ -103,7 +104,7 @@ void binarizeSensors(Sensor_Array *sensor_array)
     for (int i = 0; i < sensor_array->number_of_sensors; i++)
     {
 
-        if (sensor_array->array[i].mapped_value > SENSOR_THRESHOLD)
+        if (sensor_array->array[i].mapped_value > sensor_array->array[i].threshold)
         {
             sensor_array->array[i].on = 1;
         }

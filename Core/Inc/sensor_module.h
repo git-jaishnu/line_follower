@@ -43,11 +43,6 @@ typedef struct {
 
 extern volatile uint16_t dma_buffer[NUM_SENSORS];
 
-extern int sensor_max[NUM_SENSORS];
-extern int sensor_min[NUM_SENSORS];
-extern int sensor_weight[NUM_SENSORS];
-extern int sensor_bool[NUM_SENSORS];
-
 
 
 void Sync_Sensors(Sensor_Array *sensor_array);

@@ -142,6 +142,8 @@ int main(void) {
 	sensor_array.array = sensors;
 	sensor_array.weights = sensor_weights;
 
+	Initialize_Sensor_Array(&sensor_array);
+
 
 
 	pid.Kd = 0;
@@ -153,7 +155,7 @@ int main(void) {
 
 	uint32_t last_time = HAL_GetTick();
 
-	autoCalibrate(&sensor_array,3000, 400);
+
 	/* USER CODE END 2 */
 
 	/* Infinite loop */

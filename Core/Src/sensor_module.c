@@ -37,14 +37,23 @@ void Initialize_Sensor_Array(Sensor_Array *sensor_array){
 
 void Sync_Sensors(Sensor_Array *sensor_array){
 
-	sensor_array->array[0].adc_raw = dma_buffer[4];
-	sensor_array->array[1].adc_raw = dma_buffer[3];
-	sensor_array->array[2].adc_raw = dma_buffer[5];
-	sensor_array->array[3].adc_raw = dma_buffer[2];
-	sensor_array->array[4].adc_raw = dma_buffer[6];
-	sensor_array->array[5].adc_raw = dma_buffer[1];
-	sensor_array->array[6].adc_raw = dma_buffer[7];
-	sensor_array->array[7].adc_raw = dma_buffer[0];
+//	sensor_array->array[0].adc_raw = dma_buffer[4];
+//	sensor_array->array[1].adc_raw = dma_buffer[3];
+//	sensor_array->array[2].adc_raw = dma_buffer[5];
+//	sensor_array->array[3].adc_raw = dma_buffer[2];
+//	sensor_array->array[4].adc_raw = dma_buffer[6];
+//	sensor_array->array[5].adc_raw = dma_buffer[1];
+//	sensor_array->array[6].adc_raw = dma_buffer[7];
+//	sensor_array->array[7].adc_raw = dma_buffer[0];
+
+	sensor_array->array[0].adc_raw = dma_buffer[0];
+	sensor_array->array[1].adc_raw = dma_buffer[1];
+	sensor_array->array[2].adc_raw = dma_buffer[2];
+	sensor_array->array[3].adc_raw = dma_buffer[3];
+	sensor_array->array[4].adc_raw = dma_buffer[4];
+	sensor_array->array[5].adc_raw = dma_buffer[5];
+	sensor_array->array[6].adc_raw = dma_buffer[6];
+
 }
 
 
@@ -53,7 +62,7 @@ void autoCalibrate(Sensor_Array *sensor_array , uint32_t duration_ms, int speed)
 
     for (int i = 0; i < sensor_array->number_of_sensors; i++) {
     	sensor_array->array[i].adc_min = 0;
-    	sensor_array->array[i].adc_max = 4096;
+    	sensor_array->array[i].adc_max = 4095;
     }
 
     set_motor_speed(-speed, speed);
@@ -122,7 +131,7 @@ void binarizeSensors(Sensor_Array *sensor_array)
 int get_line_error(Sensor_Array *sensor_array) {
 	long adc_sum = 0;
     long weighted_sum = 0;
-    for(int i = 0 ; i < 8 ; i++){
+    for(int i = 0 ; i < NUM_SENSORS ; i++){
     	weighted_sum += (sensor_array->array[i].mapped_value)*(sensor_array->array[i].weight);
     	adc_sum += sensor_array->array[i].mapped_value;
     }
@@ -182,6 +191,7 @@ int detect_left(Sensor_Array* sensor_array){
 	else return 0;
 
 }
+
 
 
 int detect_right(Sensor_Array* sensor_array){

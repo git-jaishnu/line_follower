@@ -23,7 +23,7 @@ typedef struct {
 	uint16_t adc_raw;
 	uint16_t adc_max;
 	uint16_t adc_min;
-	uint16_t weight;
+	int16_t weight;
 	int threshold;
 	int mapped_value;
 	int on;
@@ -43,7 +43,7 @@ typedef struct {
 
 extern volatile uint16_t dma_buffer[NUM_SENSORS];
 
-
+void Initialize_Sensor_Array(Sensor_Array *sensor_array);
 
 void Sync_Sensors(Sensor_Array *sensor_array);
 void autoCalibrate(Sensor_Array *sensor_array , uint32_t duration_ms, int speed);

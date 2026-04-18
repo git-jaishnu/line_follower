@@ -1,10 +1,11 @@
 ../Core/Src/sensor_module.c:23:6:Initialize_Sensor_Array	24	static
 ../Core/Src/sensor_module.c:38:6:Sync_Sensors	16	static
-../Core/Src/sensor_module.c:61:6:autoCalibrate	40	static
+../Core/Src/sensor_module.c:61:6:autoCalibrate	48	static
 ../Core/Src/sensor_module.c:93:6:processSensors	32	static
 ../Core/Src/sensor_module.c:110:6:binarizeSensors	24	static
 ../Core/Src/sensor_module.c:131:5:get_line_error	32	static
-../Core/Src/sensor_module.c:146:5:calculate_pid	40	static
-../Core/Src/sensor_module.c:170:5:count_active_sensors	24	static
-../Core/Src/sensor_module.c:180:5:detect_left	24	static
-../Core/Src/sensor_module.c:196:5:detect_right	24	static
+../Core/Src/sensor_module.c:142:5:get_line_error_digital	24	static
+../Core/Src/sensor_module.c:154:5:calculate_pid	40	static
+../Core/Src/sensor_module.c:177:5:count_active_sensors	24	static
+../Core/Src/sensor_module.c:189:14:detect_junction	56	static
+../Core/Src/sensor_module.c:228:14:detect_junction_digital	24	static

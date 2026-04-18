@@ -22,10 +22,14 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+
+#include <string.h>
+#include "stdlib.h"
 #include "sensor_module.h"
 #include "utils.h"
 #include "bluetooth.h"
 #include "motor.h"
+
 
 /* USER CODE END Includes */
 
@@ -74,11 +78,7 @@ static void MX_USART1_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-
-
-int sensor_weights[NUM_SENSORS] = {-4, -3, -2, -0 , 2, 3, 4};
-
-uint8_t rxBuffer[RX_BUFFER_SIZE];
+int sensor_weights[NUM_SENSORS] = { -4, -3, -2, -1,1, 2, 3, 4 };
 
 volatile int line;
 volatile int correction;
@@ -86,7 +86,80 @@ volatile int left_speed;
 volatile int right_speed;
 int left;
 int right;
-int a;
+int start = 1;
+
+uint8_t rx_data;
+char rx_buffer[30];
+int rx_index = 0;
+float b ;
+
+
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+
+    if (GPIO_Pin == GPIO_PIN_14)
+    {
+    	if(start == 1){
+    		start = 0;
+    	}
+    	else if (start == 0){
+    	start = 1;
+    	}
+
+
+    }
+}
+
+
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+	if (huart->Instance == USART1) {
+		if (rx_data == '\n' || rx_data == '\r') {
+
+			rx_buffer[rx_index] = '\0';
+
+			char type = rx_buffer[0];
+			float value = atof(&rx_buffer[1]);
+			char *msg = "Received!\r\n";
+
+
+			switch (type) {
+			case 'P':
+				pid.Kp = value;
+
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+				break;
+			case 'I':
+				pid.Ki = value;
+
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+				break;
+			case 'D':
+				pid.Kd = value;
+
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+				break;
+			case 'B':
+				sensor_array.base_speed = value;
+
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+				break;
+			case 'X':
+				start = 0;
+
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+				break;
+			}
+
+			rx_index = 0;
+		} else {
+			rx_buffer[rx_index++] = rx_data;
+		}
+
+		HAL_UART_Receive_IT(&huart1, &rx_data, 1);
+	}
+}
 
 /* USER CODE END 0 */
 
@@ -99,14 +172,16 @@ int main(void)
 
   /* USER CODE BEGIN 1 */
 
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	HAL_Init();
 
   /* USER CODE BEGIN Init */
+
 
   /* USER CODE END Init */
 
@@ -130,28 +205,27 @@ int main(void)
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
 
-	HAL_ADC_Start_DMA(&hadc1, (uint32_t*) dma_buffer, NUM_SENSORS);
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t*) dma_buffer, NUM_SENSORS + 1);
 
-	HAL_UART_Receive_IT(&huart1, rxBuffer, 5);
-
-
+	HAL_UART_Receive_IT(&huart1, &rx_data, 1);
 
 	sensor_array.number_of_sensors = NUM_SENSORS;
 	sensor_array.array = sensors;
 	sensor_array.weights = sensor_weights;
+	sensor_array.base_speed = 500;
 
 	Initialize_Sensor_Array(&sensor_array);
 
-
-
-	pid.Kd = 0;
-	pid.Ki = 0;
-	pid.Kp = 0.5;
+	pid.Kd = 1;
+	pid.Ki = 0.5;
+	pid.Kp = 1;
 	pid.integral = 0;
 	pid.last_error = 0;
-	pid.limit = 255;
+	pid.limit = 300;
 
 	uint32_t last_time = HAL_GetTick();
+
+
 
 
   /* USER CODE END 2 */
@@ -160,10 +234,13 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1) {
 
+
+		b = battery_voltage();
 		Sync_Sensors(&sensor_array);
 
 		uint32_t current_time = HAL_GetTick();
-		float dt = (current_time - last_time) / 1000.0f;;
+		float dt = (current_time - last_time) / 1000.0f;
+
 
 		if (dt == 0)
 			continue;
@@ -172,14 +249,21 @@ int main(void)
 		processSensors(&sensor_array);
 		binarizeSensors(&sensor_array);
 
-		line = get_line_error(&sensor_array);
-		correction = calculate_pid(&pid, line, dt);
-
-		follow_line(correction);
 
 
+		if(start == 1){
 
+			line = get_line_error_digital(&sensor_array);
+			correction = calculate_pid(&pid, line, dt);
 
+			follow_line(correction , &sensor_array);
+			JunctionType j = detect_junction_digital(&sensor_array, line);
+			handle_junction(&sensor_array, j, 700);
+		}
+
+		else{
+			set_motor_speed(0, 0, battery_voltage());
+		}
 
     /* USER CODE END WHILE */
 
@@ -220,7 +304,7 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
@@ -258,7 +342,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 7;
+  hadc1.Init.NbrOfConversion = 9;
   hadc1.Init.DMAContinuousRequests = ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -329,6 +413,24 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_7;
+  sConfig.Rank = 8;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_8;
+  sConfig.Rank = 9;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
@@ -357,7 +459,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 0;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 1000;
+  htim1.Init.Period = 999;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -428,7 +530,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
+  huart1.Init.BaudRate = 9600;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -474,11 +576,18 @@ static void MX_GPIO_Init(void)
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : PC14 */
+  GPIO_InitStruct.Pin = GPIO_PIN_14;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB4 */
   GPIO_InitStruct.Pin = GPIO_PIN_4;
@@ -486,6 +595,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 

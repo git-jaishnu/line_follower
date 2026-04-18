@@ -4,7 +4,8 @@
 ../Core/Src/sensor_module.c:93:6:processSensors	3
 ../Core/Src/sensor_module.c:110:6:binarizeSensors	3
 ../Core/Src/sensor_module.c:131:5:get_line_error	2
-../Core/Src/sensor_module.c:146:5:calculate_pid	5
-../Core/Src/sensor_module.c:170:5:count_active_sensors	3
-../Core/Src/sensor_module.c:180:5:detect_left	4
-../Core/Src/sensor_module.c:196:5:detect_right	4
+../Core/Src/sensor_module.c:142:5:get_line_error_digital	2
+../Core/Src/sensor_module.c:154:5:calculate_pid	5
+../Core/Src/sensor_module.c:177:5:count_active_sensors	3
+../Core/Src/sensor_module.c:189:14:detect_junction	11
+../Core/Src/sensor_module.c:228:14:detect_junction_digital	4

@@ -8,14 +8,14 @@
 
 #include "stm32f4xx_hal.h"
 #include "utils.h"
-
 #include "motor.h"
 #include "sensor_module.h"
 
 
 
 
-volatile uint16_t dma_buffer[NUM_SENSORS];
+
+volatile uint16_t dma_buffer[NUM_SENSORS + 1];
 
 
 
@@ -37,22 +37,22 @@ void Initialize_Sensor_Array(Sensor_Array *sensor_array){
 
 void Sync_Sensors(Sensor_Array *sensor_array){
 
-//	sensor_array->array[0].adc_raw = dma_buffer[4];
-//	sensor_array->array[1].adc_raw = dma_buffer[3];
-//	sensor_array->array[2].adc_raw = dma_buffer[5];
-//	sensor_array->array[3].adc_raw = dma_buffer[2];
-//	sensor_array->array[4].adc_raw = dma_buffer[6];
-//	sensor_array->array[5].adc_raw = dma_buffer[1];
-//	sensor_array->array[6].adc_raw = dma_buffer[7];
-//	sensor_array->array[7].adc_raw = dma_buffer[0];
+	sensor_array->array[0].adc_raw = dma_buffer[4];
+	sensor_array->array[1].adc_raw = dma_buffer[3];
+	sensor_array->array[2].adc_raw = dma_buffer[5];
+	sensor_array->array[3].adc_raw = dma_buffer[2];
+	sensor_array->array[4].adc_raw = dma_buffer[6];
+	sensor_array->array[5].adc_raw = dma_buffer[1];
+	sensor_array->array[6].adc_raw = dma_buffer[7];
+	sensor_array->array[7].adc_raw = dma_buffer[0];
 
-	sensor_array->array[0].adc_raw = dma_buffer[0];
-	sensor_array->array[1].adc_raw = dma_buffer[1];
-	sensor_array->array[2].adc_raw = dma_buffer[2];
-	sensor_array->array[3].adc_raw = dma_buffer[3];
-	sensor_array->array[4].adc_raw = dma_buffer[4];
-	sensor_array->array[5].adc_raw = dma_buffer[5];
-	sensor_array->array[6].adc_raw = dma_buffer[6];
+//	sensor_array->array[0].adc_raw = dma_buffer[0];
+//	sensor_array->array[1].adc_raw = dma_buffer[1];
+//	sensor_array->array[2].adc_raw = dma_buffer[2];
+//	sensor_array->array[3].adc_raw = dma_buffer[3];
+//	sensor_array->array[4].adc_raw = dma_buffer[4];
+//	sensor_array->array[5].adc_raw = dma_buffer[5];
+//	sensor_array->array[6].adc_raw = dma_buffer[6];
 
 }
 
@@ -65,7 +65,7 @@ void autoCalibrate(Sensor_Array *sensor_array , uint32_t duration_ms, int speed)
     	sensor_array->array[i].adc_max = 4095;
     }
 
-    set_motor_speed(-speed, speed);
+    set_motor_speed(-speed, speed , battery_voltage());
 
     uint32_t startTime = HAL_GetTick();
 
@@ -84,7 +84,7 @@ void autoCalibrate(Sensor_Array *sensor_array , uint32_t duration_ms, int speed)
     }
 
 
-    set_motor_speed(0, 0);
+    set_motor_speed(0, 0 , battery_voltage());
 }
 
 
@@ -136,7 +136,15 @@ int get_line_error(Sensor_Array *sensor_array) {
     	adc_sum += sensor_array->array[i].mapped_value;
     }
 
-    return (int)(weighted_sum);
+    return ((int)(weighted_sum)/(int)adc_sum);
+}
+
+int get_line_error_digital(Sensor_Array* sensor_array){
+	int weighted_sum = 0;
+	for(int i = 0 ; i < NUM_SENSORS ; i++){
+		weighted_sum += (sensor_array->array[i].on)*(sensor_array->array[i].weight);
+	}
+	return (weighted_sum/10)*100*5;
 }
 
 
@@ -148,7 +156,6 @@ int calculate_pid(PID_Controller *pid, int error, float dt) {
 
     float P = pid->Kp * error;
 
-    // Integral with Windup Guard
     pid->integral += (error * dt);
     if (pid->integral > pid->limit) pid->integral = pid->limit;
     if (pid->integral < -pid->limit) pid->integral = -pid->limit;
@@ -177,35 +184,68 @@ int count_active_sensors(Sensor_Array *sensor_array) {
     return active_count;
 }
 
-int detect_left(Sensor_Array* sensor_array){
 
-	int sum = 0;
-	for(int i  = 0 ; i < 4 ; i++){
-		if(sensor_array->array[i].on == 1){
-			sum++;
-		}
+
+JunctionType detect_junction(Sensor_Array *sensor_array) {
+
+    int n = sensor_array->number_of_sensors;
+    int outer_width = n / 4;
+    if (outer_width < 1) outer_width = 1;
+
+    int left_outer_count  = 0;
+    int right_outer_count = 0;
+    int center_count      = 0;
+    int total             = 0;
+
+    for (int i = 0; i < n; i++) {
+        total += sensor_array->array[i].on;
+
+        if (i < outer_width) {
+            left_outer_count  += sensor_array->array[i].on;
+        } else if (i >= n - outer_width) {
+            right_outer_count += sensor_array->array[i].on;
+        } else {
+            center_count      += sensor_array->array[i].on;
+        }
+    }
+
+
+    if (center_count == 0){ return NO_JUNCTION;}
+
+    int left_branch  = (left_outer_count  >= 1);
+    int right_branch = (right_outer_count >= 1);
+
+    if (left_branch && right_branch) return T_JUNCTION;
+    if (left_branch)                 return LEFT_JUNCTION;
+    if (right_branch)                return RIGHT_JUNCTION;
+
+    return NO_JUNCTION;
+}
+
+
+
+
+JunctionType detect_junction_digital(Sensor_Array *sensor_array , int error) {
+
+	int sensor_count = count_active_sensors(sensor_array);
+	if(error < -450){
+		return LEFT_JUNCTION;
 	}
-	if(sum > 3){
-		return 1;
+	else if (error > 450){
+		return RIGHT_JUNCTION;
 	}
-	else return 0;
+	else if (sensor_count >=6){
+		return T_JUNCTION;
+	}
+
+	return NO_JUNCTION;
+
+
+
 
 }
 
 
 
-int detect_right(Sensor_Array* sensor_array){
 
-	int sum = 0;
-	for(int i  = 7 ; i > 4 ; i--){
-		if(sensor_array->array[i].on == 1){
-			sum++;
-		}
-	}
-	if(sum > 3){
-		return 1;
-	}
-	else return 0;
-
-}
 

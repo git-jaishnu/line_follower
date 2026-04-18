@@ -66,7 +66,6 @@ void Error_Handler(void);
 /* USER CODE BEGIN Private defines */
 
 
-extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim1;
 extern UART_HandleTypeDef huart1;
 

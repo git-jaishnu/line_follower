@@ -10,38 +10,16 @@
 
 
 
-
-typedef struct {
-    float Kp, Ki, Kd;
-    float integral;
-    float last_error;
-    float limit;
-} PID_Controller;
-
-
-typedef struct {
-	uint16_t adc_raw;
-	uint16_t adc_max;
-	uint16_t adc_min;
-	int16_t weight;
-	int threshold;
-	int mapped_value;
-	int on;
-
-
-} Sensor;
-
-
-typedef struct {
-	int number_of_sensors;
-	Sensor *array;
-	int *weights;
-
-} Sensor_Array;
+#include "types.h"
 
 
 
-extern volatile uint16_t dma_buffer[NUM_SENSORS];
+
+
+
+
+
+extern volatile uint16_t dma_buffer[NUM_SENSORS + 1];
 
 void Initialize_Sensor_Array(Sensor_Array *sensor_array);
 
@@ -53,10 +31,13 @@ void binarizeSensors(Sensor_Array *sensor_array);
 
 
 int get_line_error(Sensor_Array *sensor_array);
+int get_line_error_digital(Sensor_Array* sensor_array);
+
 int calculate_pid(PID_Controller *pid, int error, float dt);
 
-int detect_right();
-int detect_left();
+JunctionType detect_junction(Sensor_Array *sensor_array);
+JunctionType detect_junction_digital(Sensor_Array *sensor_array , int error);
+
 
 
 #endif /* INC_SENSOR_MODULE_H_ */

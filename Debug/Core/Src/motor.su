@@ -1,2 +1,5 @@
-../Core/Src/motor.c:11:6:set_motor_speed	16	static
-../Core/Src/motor.c:53:6:follow_line	24	static
+../Core/Src/motor.c:15:6:set_motor_speed	32	static
+../Core/Src/motor.c:63:6:follow_line	24	static
+../Core/Src/motor.c:78:6:swing_turn_left	32	static
+../Core/Src/motor.c:97:6:swing_turn_right	32	static
+../Core/Src/motor.c:116:6:handle_junction	24	static

@@ -27,7 +27,7 @@
 
 float constrain_float(float x, float min, float max);
 int constrain_int(int x, int min, int max);
-float battery_voltage();
+float battery_voltage(volatile uint16_t *dma_buffer);
 
 
 

@@ -86,7 +86,7 @@ volatile int left_speed;
 volatile int right_speed;
 int left;
 int right;
-int start = 1;
+int start = 0;
 
 uint8_t rx_data;
 char rx_buffer[30];
@@ -178,7 +178,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -235,7 +235,7 @@ int main(void)
 	while (1) {
 
 
-		b = battery_voltage();
+
 		Sync_Sensors(&sensor_array);
 
 		uint32_t current_time = HAL_GetTick();
@@ -252,6 +252,7 @@ int main(void)
 
 
 		if(start == 1){
+			b = battery_voltage(dma_buffer);
 
 			line = get_line_error_digital(&sensor_array);
 			correction = calculate_pid(&pid, line, dt);
@@ -262,7 +263,7 @@ int main(void)
 		}
 
 		else{
-			set_motor_speed(0, 0, battery_voltage());
+			set_motor_speed(0, 0, battery_voltage(dma_buffer));
 		}
 
     /* USER CODE END WHILE */
@@ -425,7 +426,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_8;
+  sConfig.Channel = ADC_CHANNEL_9;
   sConfig.Rank = 9;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -580,21 +581,11 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
-
   /*Configure GPIO pin : PC14 */
   GPIO_InitStruct.Pin = GPIO_PIN_14;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PB4 */
-  GPIO_InitStruct.Pin = GPIO_PIN_4;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);

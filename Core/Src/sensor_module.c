@@ -65,7 +65,7 @@ void autoCalibrate(Sensor_Array *sensor_array , uint32_t duration_ms, int speed)
     	sensor_array->array[i].adc_max = 4095;
     }
 
-    set_motor_speed(-speed, speed , battery_voltage());
+    set_motor_speed(-speed, speed , battery_voltage(dma_buffer));
 
     uint32_t startTime = HAL_GetTick();
 
@@ -84,7 +84,7 @@ void autoCalibrate(Sensor_Array *sensor_array , uint32_t duration_ms, int speed)
     }
 
 
-    set_motor_speed(0, 0 , battery_voltage());
+    set_motor_speed(0, 0 , battery_voltage(dma_buffer));
 }
 
 

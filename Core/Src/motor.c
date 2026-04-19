@@ -70,14 +70,14 @@ void follow_line(int correction , Sensor_Array* sensor_array) {
     right_speed = constrain_int(right_speed, 0, 999);
 
 
-    set_motor_speed(right_speed, left_speed , battery_voltage());
+    set_motor_speed(right_speed, left_speed , battery_voltage(dma_buffer));
 }
 
 
 
 void swing_turn_left(Sensor_Array *sa, int speed) {
 	int error = -1000;
-    set_motor_speed(-speed, speed, battery_voltage());
+    set_motor_speed(-speed, speed, battery_voltage(dma_buffer));
 
 
     HAL_Delay(100);
@@ -91,12 +91,12 @@ void swing_turn_left(Sensor_Array *sa, int speed) {
         HAL_Delay(5);
     }
 
-    set_motor_speed(0, 0, battery_voltage());
+    set_motor_speed(0, 0, battery_voltage(dma_buffer));
 }
 
 void swing_turn_right(Sensor_Array *sa, int speed) {
 	int error = 1000;
-    set_motor_speed(speed, -speed, battery_voltage());
+    set_motor_speed(speed, -speed, battery_voltage(dma_buffer));
 
     HAL_Delay(100);
 
@@ -109,7 +109,7 @@ void swing_turn_right(Sensor_Array *sa, int speed) {
         HAL_Delay(5);
     }
 
-    set_motor_speed(0, 0, battery_voltage());
+    set_motor_speed(0, 0, battery_voltage(dma_buffer));
 }
 
 

@@ -81,6 +81,7 @@ static void MX_USART1_UART_Init(void);
 int sensor_weights[NUM_SENSORS] = { -4, -3, -2, -1,1, 2, 3, 4 };
 
 volatile int line;
+volatile int line2;
 volatile int correction;
 volatile int left_speed;
 volatile int right_speed;
@@ -92,6 +93,7 @@ uint8_t rx_data;
 char rx_buffer[30];
 int rx_index = 0;
 float b ;
+JunctionType j;
 
 
 
@@ -239,31 +241,39 @@ int main(void)
 		Sync_Sensors(&sensor_array);
 
 		uint32_t current_time = HAL_GetTick();
-		float dt = (current_time - last_time) / 1000.0f;
+		uint32_t time_diff = current_time - last_time;
+
+		if (time_diff == 0) {
+		    continue;
+		}
 
 
-		if (dt == 0)
-			continue;
+		float dt = time_diff / 1000.0f;
 		last_time = current_time;
 
 		processSensors(&sensor_array);
 		binarizeSensors(&sensor_array);
 
+		if (start == 1) {
+		    b = battery_voltage(dma_buffer);
 
 
-		if(start == 1){
-			b = battery_voltage(dma_buffer);
 
-			line = get_line_error_digital(&sensor_array);
-			correction = calculate_pid(&pid, line, dt);
+		    j = detect_junction_digital(&sensor_array);
 
-			follow_line(correction , &sensor_array);
-			JunctionType j = detect_junction_digital(&sensor_array, line);
-			handle_junction(&sensor_array, j, 700);
+		    if (j != NO_JUNCTION) {
+
+		        handle_junction(&sensor_array, j, 800);
+		    }
+		    else {
+		    	line = get_line_error_digital(&sensor_array);
+
+		        correction = calculate_pid(&pid, line, dt);
+		        follow_line(correction, &sensor_array);
+		    }
 		}
-
-		else{
-			set_motor_speed(0, 0, battery_voltage(dma_buffer));
+		else {
+		    set_motor_speed(0, 0, battery_voltage(dma_buffer));
 		}
 
     /* USER CODE END WHILE */
@@ -460,7 +470,7 @@ static void MX_TIM1_Init(void)
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 0;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 999;
+  htim1.Init.Period = 1000;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -485,6 +495,7 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
+  sConfigOC.OCMode = TIM_OCMODE_PWM2;
   if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
@@ -493,6 +504,7 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
   if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
   {
     Error_Handler();

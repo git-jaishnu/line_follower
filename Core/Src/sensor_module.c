@@ -110,10 +110,10 @@ void processSensors(Sensor_Array *sensor_array)
 void binarizeSensors(Sensor_Array *sensor_array)
 {
 
-    for (int i = 0; i < sensor_array->number_of_sensors; i++)
+    for (int i = 0; i < NUM_SENSORS; i++)
     {
 
-        if (sensor_array->array[i].mapped_value > sensor_array->array[i].threshold)
+        if (sensor_array->array[i].adc_raw > sensor_array->array[i].threshold)
         {
             sensor_array->array[i].on = 1;
         }
@@ -139,12 +139,24 @@ int get_line_error(Sensor_Array *sensor_array) {
     return ((int)(weighted_sum)/(int)adc_sum);
 }
 
-int get_line_error_digital(Sensor_Array* sensor_array){
-	int weighted_sum = 0;
-	for(int i = 0 ; i < NUM_SENSORS ; i++){
-		weighted_sum += (sensor_array->array[i].on)*(sensor_array->array[i].weight);
-	}
-	return (weighted_sum/10)*100*5;
+int get_line_error_digital(Sensor_Array* sensor_array) {
+    float weighted_sum = 0;
+    int active_sensors = 0;
+
+    for(int i = 0 ; i < NUM_SENSORS ; i++){
+        if (sensor_array->array[i].on == 1) {
+            weighted_sum += sensor_array->array[i].weight;
+            active_sensors++;
+        }
+    }
+
+
+
+    float true_position = weighted_sum / active_sensors;
+
+    int out = (int)(true_position * 50);
+
+    return out;
 }
 
 
@@ -177,7 +189,7 @@ int calculate_pid(PID_Controller *pid, int error, float dt) {
 int count_active_sensors(Sensor_Array *sensor_array) {
     int active_count = 0;
     for (int i = 0; i < sensor_array->number_of_sensors; i++) {
-        if (sensor_array->array[i].mapped_value > sensor_array->array[i].threshold) {
+        if (sensor_array->array[i].adc_raw > sensor_array->array[i].threshold) {
             active_count++;
         }
     }
@@ -225,24 +237,24 @@ JunctionType detect_junction(Sensor_Array *sensor_array) {
 
 
 
-JunctionType detect_junction_digital(Sensor_Array *sensor_array , int error) {
+JunctionType detect_junction_digital(Sensor_Array *sensor_array) {
+    int sensor_count = count_active_sensors(sensor_array);
 
-	int sensor_count = count_active_sensors(sensor_array);
-	if(error < -450){
-		return LEFT_JUNCTION;
-	}
-	else if (error > 450){
-		return RIGHT_JUNCTION;
-	}
-	else if (sensor_count >=6){
-		return T_JUNCTION;
-	}
+    if (sensor_count >= 6) {
+        return T_JUNCTION;
+    }
 
-	return NO_JUNCTION;
+    if (sensor_array->array[0].on == 1 && sensor_array->array[1].on == 1 &&
+        sensor_array->array[7].on == 0) {
+        return LEFT_JUNCTION;
+    }
 
+    if (sensor_array->array[7].on == 1 && sensor_array->array[6].on == 1 &&
+        sensor_array->array[0].on == 0) {
+        return RIGHT_JUNCTION;
+    }
 
-
-
+    return NO_JUNCTION;
 }
 
 

@@ -36,7 +36,7 @@ int get_line_error_digital(Sensor_Array* sensor_array);
 int calculate_pid(PID_Controller *pid, int error, float dt);
 
 JunctionType detect_junction(Sensor_Array *sensor_array);
-JunctionType detect_junction_digital(Sensor_Array *sensor_array , int error);
+JunctionType detect_junction_digital(Sensor_Array *sensor_array);
 
 
 

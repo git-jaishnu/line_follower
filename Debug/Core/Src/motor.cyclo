@@ -1,5 +1,5 @@
-../Core/Src/motor.c:15:6:set_motor_speed	9
-../Core/Src/motor.c:63:6:follow_line	1
-../Core/Src/motor.c:78:6:swing_turn_left	2
-../Core/Src/motor.c:97:6:swing_turn_right	2
-../Core/Src/motor.c:116:6:handle_junction	5
+../Core/Src/motor.c:15:6:set_motor_speed	10
+../Core/Src/motor.c:55:6:follow_line	1
+../Core/Src/motor.c:67:6:swing_turn_left	3
+../Core/Src/motor.c:93:6:swing_turn_right	3
+../Core/Src/motor.c:119:6:handle_junction	5

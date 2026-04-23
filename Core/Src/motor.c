@@ -66,6 +66,9 @@ void follow_line(int correction , Sensor_Array* sensor_array) {
 
 void swing_turn_left(Sensor_Array *sa, int speed) {
 
+	set_motor_speed(speed, speed, battery_voltage(dma_buffer));
+	HAL_Delay(100);
+
     set_motor_speed(-speed, speed, battery_voltage(dma_buffer));
     HAL_Delay(100);
 
@@ -75,7 +78,7 @@ void swing_turn_left(Sensor_Array *sa, int speed) {
         processSensors(sa);
         binarizeSensors(sa);
 
-        if (sa->array[2].on == 1 || sa->array[3].on == 1) {
+        if (sa->array[3].on == 1 || sa->array[4].on == 1) {
             break;
         }
 
@@ -91,6 +94,8 @@ void swing_turn_left(Sensor_Array *sa, int speed) {
 }
 
 void swing_turn_right(Sensor_Array *sa, int speed) {
+	set_motor_speed(speed, speed, battery_voltage(dma_buffer));
+		HAL_Delay(100);
     set_motor_speed(speed, -speed, battery_voltage(dma_buffer));
 
     HAL_Delay(100);
@@ -128,8 +133,8 @@ void handle_junction(Sensor_Array *sa, JunctionType j , int speed) {
             break;
 
         case T_JUNCTION:
-        	set_motor_speed(600, 600, battery_voltage(dma_buffer));
-        	HAL_Delay(200);
+        	set_motor_speed(750, 750, battery_voltage(dma_buffer));
+        	HAL_Delay(10);
         	set_motor_speed(0, 0, battery_voltage(dma_buffer));
         	break;
 

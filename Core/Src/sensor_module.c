@@ -240,7 +240,7 @@ JunctionType detect_junction(Sensor_Array *sensor_array) {
 JunctionType detect_junction_digital(Sensor_Array *sensor_array) {
     int sensor_count = count_active_sensors(sensor_array);
 
-    if (sensor_count >= 6) {
+    if (sensor_count >= 5) {
         return T_JUNCTION;
     }
 

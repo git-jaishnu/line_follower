@@ -152,6 +152,13 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 				HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
 				break;
+			case 'O':
+				start = 1;
+
+				HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+				break;
+
+
 			}
 
 			rx_index = 0;
@@ -263,7 +270,7 @@ int main(void)
 
 		    if (j != NO_JUNCTION) {
 
-		        handle_junction(&sensor_array, j, 800);
+		        handle_junction(&sensor_array, j, 600);
 		    }
 		    else {
 		    	line = get_line_error_digital(&sensor_array);

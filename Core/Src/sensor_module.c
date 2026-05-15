@@ -37,14 +37,14 @@ void Initialize_Sensor_Array(Sensor_Array *sensor_array){
 
 void Sync_Sensors(Sensor_Array *sensor_array){
 
-	sensor_array->array[0].adc_raw = dma_buffer[4];
-	sensor_array->array[1].adc_raw = dma_buffer[3];
-	sensor_array->array[2].adc_raw = dma_buffer[5];
-	sensor_array->array[3].adc_raw = dma_buffer[2];
-	sensor_array->array[4].adc_raw = dma_buffer[6];
-	sensor_array->array[5].adc_raw = dma_buffer[1];
-	sensor_array->array[6].adc_raw = dma_buffer[7];
-	sensor_array->array[7].adc_raw = dma_buffer[0];
+	sensor_array->array[0].adc_raw = dma_buffer[3];
+	sensor_array->array[1].adc_raw = dma_buffer[4];
+	sensor_array->array[2].adc_raw = dma_buffer[2];
+	sensor_array->array[3].adc_raw = dma_buffer[5];
+	sensor_array->array[4].adc_raw = dma_buffer[1];
+	sensor_array->array[5].adc_raw = dma_buffer[6];
+	sensor_array->array[6].adc_raw = dma_buffer[0];
+	sensor_array->array[7].adc_raw = dma_buffer[7];
 
 //	sensor_array->array[0].adc_raw = dma_buffer[0];
 //	sensor_array->array[1].adc_raw = dma_buffer[1];
@@ -142,6 +142,7 @@ int get_line_error(Sensor_Array *sensor_array) {
 int get_line_error_digital(Sensor_Array* sensor_array) {
     float weighted_sum = 0;
     int active_sensors = 0;
+    static int last_error = 0 ;
 
     for(int i = 0 ; i < NUM_SENSORS ; i++){
         if (sensor_array->array[i].on == 1) {
@@ -150,11 +151,15 @@ int get_line_error_digital(Sensor_Array* sensor_array) {
         }
     }
 
+    if(active_sensors == 0) return last_error;
+
 
 
     float true_position = weighted_sum / active_sensors;
 
     int out = (int)(true_position * 50);
+
+    last_error = out;
 
     return out;
 }
@@ -240,17 +245,15 @@ JunctionType detect_junction(Sensor_Array *sensor_array) {
 JunctionType detect_junction_digital(Sensor_Array *sensor_array) {
     int sensor_count = count_active_sensors(sensor_array);
 
-    if (sensor_count >= 5) {
+    if (sensor_count >= 5 && sensor_array->array[1].on == 1 && sensor_array->array[6].on == 1  ) {
         return T_JUNCTION;
     }
 
-    if (sensor_array->array[0].on == 1 && sensor_array->array[1].on == 1 &&
-        sensor_array->array[7].on == 0) {
+    if (sensor_array->array[0].on == 1  && sensor_array->array[7].on == 0 && sensor_array->array[1].on == 1) {
         return LEFT_JUNCTION;
     }
 
-    if (sensor_array->array[7].on == 1 && sensor_array->array[6].on == 1 &&
-        sensor_array->array[0].on == 0) {
+    if (sensor_array->array[7].on == 1  && sensor_array->array[0].on == 0 && sensor_array->array[6].on == 1)  {
         return RIGHT_JUNCTION;
     }
 

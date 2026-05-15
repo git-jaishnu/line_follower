@@ -23,12 +23,14 @@
 /* USER CODE BEGIN Includes */
 
 
-#include <string.h>
-#include "stdlib.h"
+
 #include "sensor_module.h"
 #include "utils.h"
 #include "bluetooth.h"
 #include "motor.h"
+#include <stdio.h>
+#include <string.h>
+#include "stdlib.h"
 
 
 /* USER CODE END Includes */
@@ -88,6 +90,7 @@ volatile int right_speed;
 int left;
 int right;
 int start = 0;
+volatile float dt ;
 
 uint8_t rx_data;
 char rx_buffer[30];
@@ -120,54 +123,91 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 		if (rx_data == '\n' || rx_data == '\r') {
 
 			rx_buffer[rx_index] = '\0';
-
-			char type = rx_buffer[0];
-			float value = atof(&rx_buffer[1]);
-			char *msg = "Received!\r\n";
+			rx_index = 0;
 
 
-			switch (type) {
-			case 'P':
-				pid.Kp = value;
-
-				HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-				break;
-			case 'I':
-				pid.Ki = value;
-
-				HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-				break;
-			case 'D':
-				pid.Kd = value;
-
-				HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-				break;
-			case 'B':
-				sensor_array.base_speed = value;
-
-				HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-				break;
-			case 'X':
-				start = 0;
-
-				HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-				break;
-			case 'O':
-				start = 1;
-
-				HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-				break;
+			char *cmd = rx_buffer;
 
 
+			if (strncmp(cmd, "PID:", 4) == 0) {
+				float p, i, d;
+				if (sscanf(cmd + 4, "%f,%f,%f", &p, &i, &d) == 3) {
+					pid.Kp = p;
+					pid.Ki = i;
+					pid.Kd = d;
+					pid.integral = 0;
+					pid.last_error = 0;
+				}
 			}
 
-			rx_index = 0;
+			else if (strncmp(cmd, "PARAM:", 6) == 0) {
+			    char *bs = strstr(cmd, "BS");
+			    char *pl = strstr(cmd, "PL");
+			    if (bs) sensor_array.base_speed = atoi(bs + 2);
+			    if (pl) pid.limit = atoi(pl + 2);
+			}
+
+
+			else if (strcmp(cmd, "START") == 0) {
+				start = 1;
+			} else if (strcmp(cmd, "STOP") == 0) {
+				start = 0;
+			}
+
+			else if (strlen(cmd) > 1) {
+				char type = cmd[0];
+				float val = atof(&cmd[1]);
+				if (type == 'P')
+					pid.Kp = val;
+				else if (type == 'I')
+					pid.Ki = val;
+				else if (type == 'D')
+					pid.Kd = val;
+				else if (type == 'B')
+					sensor_array.base_speed = (int) val;
+				else if (type == 'X')
+					start = 0;
+				else if (type == 'O')
+					start = 1;
+			}
+
+
 		} else {
 			rx_buffer[rx_index++] = rx_data;
 		}
 
 		HAL_UART_Receive_IT(&huart1, &rx_data, 1);
 	}
+}
+
+
+
+
+void Send_Telemetry() {
+    char buf[160];
+    char ir_part[80] = "IR:";
+    char tmp[8];
+
+
+
+    for (int i = 0; i < sensor_array.number_of_sensors; i++) {
+        snprintf(tmp, sizeof(tmp), "%u", (uint16_t)sensor_array.array[i].adc_raw);
+        strcat(ir_part, tmp);
+        if (i < sensor_array.number_of_sensors - 1) strcat(ir_part, ",");
+    }
+
+
+
+
+    snprintf(buf, sizeof(buf),
+        "%s;PL:%d;PR:%d;BV:%.1f;PE:%.1f;PO:%.1f\n",
+        ir_part,
+        (int)(sensor_array.base_speed + correction),
+        (int)(sensor_array.base_speed - correction),
+        b, (float)line, (float)correction
+    );
+
+    HAL_UART_Transmit(&huart1, (uint8_t*)buf, strlen(buf), 200);
 }
 
 /* USER CODE END 0 */
@@ -233,8 +273,7 @@ int main(void)
 	pid.limit = 300;
 
 	uint32_t last_time = HAL_GetTick();
-
-
+	static uint32_t last_telem = 0;
 
 
   /* USER CODE END 2 */
@@ -244,25 +283,31 @@ int main(void)
 	while (1) {
 
 
-
+		b = battery_voltage(dma_buffer);
 		Sync_Sensors(&sensor_array);
 
 		uint32_t current_time = HAL_GetTick();
 		uint32_t time_diff = current_time - last_time;
 
 		if (time_diff == 0) {
-		    continue;
+			continue;
 		}
+		else{
 
 
-		float dt = time_diff / 1000.0f;
-		last_time = current_time;
+		dt = time_diff / 1000.0f;
+		last_time = current_time;}
 
 		processSensors(&sensor_array);
 		binarizeSensors(&sensor_array);
 
+		if ((HAL_GetTick() - last_telem) >= TELEM_INTERVAL_MS) {
+		    last_telem = HAL_GetTick();
+		    Send_Telemetry();
+		}
+
 		if (start == 1) {
-		    b = battery_voltage(dma_buffer);
+
 
 
 
@@ -280,7 +325,7 @@ int main(void)
 		    }
 		}
 		else {
-		    set_motor_speed(0, 0, battery_voltage(dma_buffer));
+		    set_motor_speed(0, 0, b);
 		}
 
     /* USER CODE END WHILE */
@@ -550,7 +595,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 9600;
+  huart1.Init.BaudRate = 115200;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;

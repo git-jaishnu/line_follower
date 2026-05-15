@@ -8,8 +8,10 @@
 #ifndef INC_BLUETOOTH_H_
 #define INC_BLUETOOTH_H_
 
+#define TELEM_INTERVAL_MS 100
+
 void bt_send(char *msg);
-int processBluetoothCommand(uint8_t *comm);
+void processBluetoothCommand(char *cmd , int start , PID_Controller pid , Sensor_Array sensor_array );
 
 
 

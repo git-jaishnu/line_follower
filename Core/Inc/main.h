@@ -33,7 +33,6 @@ extern "C" {
 /* USER CODE BEGIN Includes */
 
 #include "utils.h"
-#include "bluetooth.h"
 
 /* USER CODE END Includes */
 

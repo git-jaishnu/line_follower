@@ -12,9 +12,9 @@
 
 
 #define RX_BUFFER_SIZE 5
-#define NUM_SENSORS 8
+#define NUM_SENSORS 6
 #define BASE_SPEED 700
-#define SENSOR_THRESHOLD 500
+#define SENSOR_THRESHOLD 1700
 #define TURN_SPEED 500
 
 

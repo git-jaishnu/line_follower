@@ -38,13 +38,11 @@ void Initialize_Sensor_Array(Sensor_Array *sensor_array){
 void Sync_Sensors(Sensor_Array *sensor_array){
 
 	sensor_array->array[0].adc_raw = dma_buffer[3];
-	sensor_array->array[1].adc_raw = dma_buffer[4];
-	sensor_array->array[2].adc_raw = dma_buffer[2];
-	sensor_array->array[3].adc_raw = dma_buffer[5];
-	sensor_array->array[4].adc_raw = dma_buffer[1];
-	sensor_array->array[5].adc_raw = dma_buffer[6];
-	sensor_array->array[6].adc_raw = dma_buffer[0];
-	sensor_array->array[7].adc_raw = dma_buffer[7];
+	sensor_array->array[1].adc_raw = dma_buffer[2];
+	sensor_array->array[2].adc_raw = dma_buffer[4];
+	sensor_array->array[3].adc_raw = dma_buffer[1];
+	sensor_array->array[4].adc_raw = dma_buffer[5];
+	sensor_array->array[5].adc_raw = dma_buffer[0];
 
 //	sensor_array->array[0].adc_raw = dma_buffer[0];
 //	sensor_array->array[1].adc_raw = dma_buffer[1];
@@ -101,7 +99,7 @@ void processSensors(Sensor_Array *sensor_array)
         norm = constrain_int(norm, 0, 1000);
 
 
-        sensor_array->array[i].mapped_value = 1000 - norm;
+        sensor_array->array[i].mapped_value = norm;
     }
 
 }
@@ -131,12 +129,24 @@ void binarizeSensors(Sensor_Array *sensor_array)
 int get_line_error(Sensor_Array *sensor_array) {
 	long adc_sum = 0;
     long weighted_sum = 0;
+    int active_sensors = 0;
+
+    static int last_error = 0 ;
+
     for(int i = 0 ; i < NUM_SENSORS ; i++){
+
+    	if(sensor_array->array[i].on == 1){
+    		active_sensors++;
+    	}
     	weighted_sum += (sensor_array->array[i].mapped_value)*(sensor_array->array[i].weight);
     	adc_sum += sensor_array->array[i].mapped_value;
     }
 
-    return ((int)(weighted_sum)/(int)adc_sum);
+    if(active_sensors == 0) return last_error;
+
+    int out = ((int)(weighted_sum)/(int)adc_sum);
+    last_error = out;
+    return out;
 }
 
 int get_line_error_digital(Sensor_Array* sensor_array) {
@@ -245,7 +255,7 @@ JunctionType detect_junction(Sensor_Array *sensor_array) {
 JunctionType detect_junction_digital(Sensor_Array *sensor_array) {
     int sensor_count = count_active_sensors(sensor_array);
 
-    if (sensor_count >= 5 && sensor_array->array[1].on == 1 && sensor_array->array[6].on == 1  ) {
+    if (sensor_count >= (NUM_SENSORS - 3) && sensor_array->array[0].on == 0 && sensor_array->array[NUM_SENSORS-1].on == 0 ) {
         return T_JUNCTION;
     }
 
@@ -253,7 +263,7 @@ JunctionType detect_junction_digital(Sensor_Array *sensor_array) {
         return LEFT_JUNCTION;
     }
 
-    if (sensor_array->array[7].on == 1  && sensor_array->array[0].on == 0 && sensor_array->array[6].on == 1)  {
+    if (sensor_array->array[NUM_SENSORS-1].on == 1  && sensor_array->array[0].on == 0 && sensor_array->array[NUM_SENSORS-2].on == 1)  {
         return RIGHT_JUNCTION;
     }
 

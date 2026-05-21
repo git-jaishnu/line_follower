@@ -93,10 +93,15 @@ int start = 0;
 volatile float dt ;
 
 uint8_t rx_data;
-char rx_buffer[30];
+char rx_buffer[96];   /* enlarged: ROUTE: command can be up to ~70 chars for 32 steps */
 int rx_index = 0;
 float b ;
 JunctionType j;
+
+/* ── Junction route instruction list ───────────────────────────────────────*/
+#define MAX_ROUTE_LEN 32
+TurnPriority junction_route[MAX_ROUTE_LEN];
+int          junction_route_len = 0;
 
 
 
@@ -154,6 +159,24 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 				start = 0;
 			}
 
+			/* ROUTE:L,R,S,L,...  — load junction instruction list */
+			else if (strncmp(cmd, "ROUTE:", 6) == 0) {
+				char *p = cmd + 6;
+				int  n  = 0;
+				while (*p != '\0' && n < MAX_ROUTE_LEN) {
+					if      (*p == 'L' || *p == 'l') junction_route[n++] = TURN_PRIORITY_LEFT;
+					else if (*p == 'R' || *p == 'r') junction_route[n++] = TURN_PRIORITY_RIGHT;
+					else if (*p == 'S' || *p == 's') junction_route[n++] = TURN_STRAIGHT;
+					p++;
+				}
+				junction_route_len = n;
+				reset_junction_counter();   /* step counter back to 0 */
+				/* Send acknowledgement back to PC */
+				char ack[32];
+				snprintf(ack, sizeof(ack), "ACK:ROUTE:%d\n", n);
+				HAL_UART_Transmit(&huart1, (uint8_t*)ack, strlen(ack), 50);
+			}
+
 			else if (strlen(cmd) > 1) {
 				char type = cmd[0];
 				float val = atof(&cmd[1]);
@@ -173,7 +196,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 
 		} else {
-			rx_buffer[rx_index++] = rx_data;
+			if (rx_index < (int)(sizeof(rx_buffer) - 1))
+				rx_buffer[rx_index++] = rx_data;
 		}
 
 		HAL_UART_Receive_IT(&huart1, &rx_data, 1);
@@ -200,11 +224,16 @@ void Send_Telemetry() {
 
 
     snprintf(buf, sizeof(buf),
-        "%s;PL:%d;PR:%d;BV:%.1f;PE:%.1f;PO:%.1f\n",
+        "%s;PL:%d;PR:%d;BV:%.1f;PE:%.1f;PO:%.1f;JS:%d/%d\n",
         ir_part,
         (int)(sensor_array.base_speed + correction),
         (int)(sensor_array.base_speed - correction),
-        b, (float)line, (float)correction
+        b, (float)line, (float)correction,
+        /* junction step reported to PC dashboard */
+        (junction_route_len > 0)
+            ? (get_junction_counter() < junction_route_len ? get_junction_counter() : junction_route_len)
+            : 0,
+        junction_route_len
     );
 
     HAL_UART_Transmit(&huart1, (uint8_t*)buf, strlen(buf), 200);
@@ -315,7 +344,7 @@ int main(void)
 
 		    if (j != NO_JUNCTION) {
 
-		        handle_junction(&sensor_array, j, 600);
+		        handle_junction(&sensor_array, j, 600, junction_route, junction_route_len);
 		    }
 		    else {
 		    	line = get_line_error_digital(&sensor_array);

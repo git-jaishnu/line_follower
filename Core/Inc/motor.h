@@ -20,7 +20,10 @@ void set_motor_speed(int left_motor , int right_motor , float battery_voltage);
 void swing_turn_right(Sensor_Array *sa, int speed);
 void swing_turn_left(Sensor_Array *sa, int speed);
 
-void handle_junction(Sensor_Array *sa, JunctionType j , int speed);
+void handle_junction(Sensor_Array *sa, JunctionType j, int speed,
+                     TurnPriority *instruction_list, int list_len);
+void reset_junction_counter(void);
+int  get_junction_counter(void);
 
 
 #endif /* INC_MOTOR_H_ */

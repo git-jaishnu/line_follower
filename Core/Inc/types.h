@@ -47,8 +47,9 @@ typedef enum {
 } JunctionType;
 
 typedef enum {
-    TURN_PRIORITY_LEFT  = 0,
-    TURN_PRIORITY_RIGHT = 1
+    TURN_PRIORITY_LEFT   = 0,
+    TURN_PRIORITY_RIGHT  = 1,
+    TURN_STRAIGHT        = 2
 } TurnPriority;
 
 

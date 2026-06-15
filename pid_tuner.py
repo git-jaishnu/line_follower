@@ -16,6 +16,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import serial
 import serial.tools.list_ports
+import socket
 import threading
 import time
 from collections import deque
@@ -36,6 +37,51 @@ C = {
     'cyan': '#00f0ff', 'grid': '#2a2a3e', 'plotbg': '#0d0d1a',
     'setpoint': '#ffffff',
 }
+
+# ── Bluetooth Direct Wrapper ────────────────────────────────────────────────
+class BTSerialWrapper:
+    """Wrapper to make a Bluetooth socket behave like a Serial object."""
+    def __init__(self, mac_address):
+        self.mac = mac_address
+        self.sock = None
+        self.is_open = False
+
+    def open(self):
+        try:
+            # RFCOMM is the protocol used by HC-05/SPP
+            self.sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
+            self.sock.settimeout(5.0)
+            self.sock.connect((self.mac, 1)) # Channel 1 is standard for SPP
+            self.sock.setblocking(False)
+            self.is_open = True
+            return True
+        except Exception as e:
+            print(f"[BT] Connection failed: {e}")
+            return False
+
+    def read(self, n=1):
+        if not self.is_open: return b''
+        try:
+            return self.sock.recv(n)
+        except (BlockingIOError, socket.timeout, ConnectionResetError):
+            return b''
+
+    def write(self, data):
+        if not self.is_open: return 0
+        try:
+            return self.sock.send(data)
+        except Exception:
+            return 0
+
+    def close(self):
+        self.is_open = False
+        if self.sock:
+            self.sock.close()
+
+    @property
+    def in_waiting(self):
+        # We return 1 to trigger a read attempt in the main loop
+        return 1
 
 
 class PIDTuner:
@@ -103,8 +149,9 @@ class PIDTuner:
                  font=("Segoe UI", 10)).pack(side='left')
         self.port_var = tk.StringVar()
         self.port_cb = ttk.Combobox(top, textvariable=self.port_var,
-                                     width=11, state='readonly')
+                                     width=17, state='normal')
         self.port_cb.pack(side='left', padx=(2, 4))
+        self.port_cb.set("c4:92:df:d4:31:24")
         tk.Button(top, text="↻", command=self._refresh_ports, bg=C['accent'],
                   fg=C['text'], relief='flat', font=("Segoe UI", 10),
                   cursor='hand2').pack(side='left', padx=(0, 10))
@@ -409,13 +456,21 @@ class PIDTuner:
             self.port_var.set(ports[0])
 
     def _connect(self):
-        port = self.port_var.get()
+        port = self.port_var.get().strip()
         baud = int(self.baud_var.get())
         if not port:
-            messagebox.showwarning("No port", "Select a COM port first.")
+            messagebox.showwarning("No port", "Select a COM port or enter a MAC Address.")
             return
+
         try:
-            self.ser = serial.Serial(port, baud, timeout=0.1)
+            # Check if it looks like a MAC address (XX:XX:XX:XX:XX:XX)
+            if len(port) == 17 and port.count(':') == 5:
+                self.ser = BTSerialWrapper(port)
+                if not self.ser.open():
+                    raise Exception("Could not connect to Bluetooth MAC.")
+            else:
+                self.ser = serial.Serial(port, baud, timeout=0.1)
+
             self.running = True
             self.thread = threading.Thread(target=self._reader, daemon=True)
             self.thread.start()
@@ -423,8 +478,9 @@ class PIDTuner:
             self.conn_btn.config(state='disabled')
             self.disc_btn.config(state='normal')
             self.t0 = time.time()
-        except serial.SerialException as e:
+        except Exception as e:
             messagebox.showerror("Connection failed", str(e))
+            self.ser = None
 
     def _disconnect(self):
         self.running = False

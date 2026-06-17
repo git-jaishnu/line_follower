@@ -5,7 +5,6 @@
  *      Author: jaish
  */
 
-
 #include "main.h"
 #include "stm32f4xx_hal.h"
 #include  "utils.h"
@@ -14,174 +13,141 @@
 
 void set_motor_speed(int left_motor, int right_motor, float battery_voltage) {
 
+	if (battery_voltage < 1.0f) {
+		battery_voltage = 8.4f;
+	}
 
-    if (battery_voltage < 1.0f) {
-        battery_voltage = 8.4f;
-    }
+	left_motor = (int) ((left_motor * 8.4f) / battery_voltage);
+	right_motor = (int) ((right_motor * 8.4f) / battery_voltage);
 
-    left_motor = (int)((left_motor * 8.4f) / battery_voltage);
-    right_motor = (int)((right_motor * 8.4f) / battery_voltage);
+	left_motor = constrain_int(left_motor, -999, 999);
+	right_motor = constrain_int(right_motor, -999, 999);
 
-    left_motor  = constrain_int(left_motor,  -999, 999);
-    right_motor = constrain_int(right_motor, -999, 999);
-
-    if (left_motor < 0 && right_motor > 0) {
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1000);
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, right_motor);
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 1000+left_motor);
-    }
-    else if (left_motor < 0 && right_motor < 0) {
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1000+right_motor);
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 1000+left_motor);
-    }
-    else if (left_motor > 0 && right_motor < 0) {
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1000+right_motor);
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, left_motor);
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 1000);
-    }
-    else if (left_motor >= 0 && right_motor >= 0) {
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1000);
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, right_motor);
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, left_motor);
-        __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 1000);
-    }
+	if (left_motor < 0 && right_motor > 0) {
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1000);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, right_motor);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 1000 + left_motor);
+	} else if (left_motor < 0 && right_motor < 0) {
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1000 + right_motor);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 1000 + left_motor);
+	} else if (left_motor > 0 && right_motor < 0) {
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1000 + right_motor);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, left_motor);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 1000);
+	} else if (left_motor >= 0 && right_motor >= 0) {
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1000);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, right_motor);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, left_motor);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 1000);
+	}
 }
 
+void follow_line(int correction, Sensor_Array *sensor_array) {
 
-void follow_line(int correction , Sensor_Array* sensor_array) {
+	int left_speed = sensor_array->base_speed + correction;
+	int right_speed = sensor_array->base_speed - correction;
 
-
-    int left_speed = sensor_array->base_speed + correction;
-    int right_speed = sensor_array->base_speed - correction;
-
-
-
-    set_motor_speed(left_speed, right_speed , battery_voltage(dma_buffer));
+	set_motor_speed(left_speed, right_speed, battery_voltage(dma_buffer));
 }
-
 
 void swing_turn_left(Sensor_Array *sa, int speed) {
 
 	set_motor_speed(speed, speed, battery_voltage(dma_buffer));
-	HAL_Delay(50);
+	HAL_Delay(100);
 
-    set_motor_speed(-speed, speed, battery_voltage(dma_buffer));
-    HAL_Delay(100);
+	set_motor_speed(-speed, speed, battery_voltage(dma_buffer));
+	HAL_Delay(100);
 
+	while (1) {
+		Sync_Sensors(sa);
+		processSensors(sa);
+		binarizeSensors(sa);
 
-    while (1) {
-        Sync_Sensors(sa);
-        processSensors(sa);
-        binarizeSensors(sa);
+		if (sa->array[3].on == 1 || sa->array[4].on == 1) {
+			break;
+		}
 
-        if (sa->array[3].on == 1 || sa->array[4].on == 1) {
-            break;
-        }
+		HAL_Delay(5);
+	}
 
-        HAL_Delay(5);
-    }
+	set_motor_speed(speed, -speed, battery_voltage(dma_buffer));
+	HAL_Delay(20);
 
-
-    set_motor_speed(speed, -speed, battery_voltage(dma_buffer));
-    HAL_Delay(20);
-
-
-    set_motor_speed(0, 0, battery_voltage(dma_buffer));
+	set_motor_speed(0, 0, battery_voltage(dma_buffer));
 }
 
 void swing_turn_right(Sensor_Array *sa, int speed) {
 	set_motor_speed(speed, speed, battery_voltage(dma_buffer));
-		HAL_Delay(50);
-    set_motor_speed(speed, -speed, battery_voltage(dma_buffer));
 
-    HAL_Delay(100);
+	HAL_Delay(100);
+	set_motor_speed(speed, -speed, battery_voltage(dma_buffer));
 
-    while (1) {
-        Sync_Sensors(sa);
-        processSensors(sa);
-        binarizeSensors(sa);
+	HAL_Delay(100);
 
-        if (sa->array[2].on == 1 || sa->array[3].on == 1) {
-            break;
-        }
+	while (1) {
+		Sync_Sensors(sa);
+		processSensors(sa);
+		binarizeSensors(sa);
 
-        HAL_Delay(5);
-    }
+		if (sa->array[2].on == 1 || sa->array[3].on == 1) {
+			break;
+		}
 
+		HAL_Delay(5);
+	}
 
-    set_motor_speed(-speed, speed, battery_voltage(dma_buffer));
-    HAL_Delay(20);
+	set_motor_speed(-speed, speed, battery_voltage(dma_buffer));
+	HAL_Delay(20);
 
-    set_motor_speed(0, 0, battery_voltage(dma_buffer));
+	set_motor_speed(0, 0, battery_voltage(dma_buffer));
 }
 
+void shoot_through(Sensor_Array *sa, int speed) {
+	set_motor_speed(speed, speed, battery_voltage(dma_buffer));
 
 
-/* Static junction step counter — persists across calls, reset by reset_junction_counter() */
-static int _jct_counter = 0;
+	while (1) {
+		Sync_Sensors(sa);
+		processSensors(sa);
+		binarizeSensors(sa);
 
-void reset_junction_counter(void) {
-    _jct_counter = 0;
+		if ((sa->array[2].on == 1 || sa->array[3].on == 1) && (sa->array[0].on == 0 || sa->array[7].on == 0) ) {
+			break;
+		}
+
+		HAL_Delay(5);
+	}
+
+	HAL_Delay(20);
 }
 
-int get_junction_counter(void) {
-    return _jct_counter;
+void handle_junction(Sensor_Array *sa, JunctionType j, int speed) {
+	switch (j) {
+
+	case LEFT_JUNCTION:
+		swing_turn_left(sa, speed);
+		break;
+
+	case RIGHT_JUNCTION:
+		swing_turn_right(sa, speed);
+		break;
+
+	case T_JUNCTION:
+		shoot_through(sa, BASE_SPEED);
+		break;
+
+	case CROSS_JUNCTION:
+		HAL_Delay(100);
+		break;
+
+	case NO_JUNCTION:
+		break;
+	default:
+		break;
+	}
 }
-
-void handle_junction(Sensor_Array *sa, JunctionType j, int speed,
-                     TurnPriority *instruction_list, int list_len) {
-
-    switch (j) {
-
-        case LEFT_JUNCTION:
-            swing_turn_left(sa, speed);
-            break;
-
-        case RIGHT_JUNCTION:
-            swing_turn_right(sa, speed);
-            break;
-
-        case T_JUNCTION: {
-            /* Determine this step's action */
-            TurnPriority action = TURN_STRAIGHT;   /* default: straight when list exhausted */
-            if (list_len > 0 && _jct_counter < list_len) {
-                action = instruction_list[_jct_counter];
-            }
-            _jct_counter++;          /* advance AFTER reading so next call gets next step */
-
-            if (action == TURN_PRIORITY_LEFT) {
-                swing_turn_left(sa, speed);
-            } else if (action == TURN_PRIORITY_RIGHT) {
-                swing_turn_right(sa, speed);
-            } else {                 /* TURN_STRAIGHT or any out-of-range value */
-                /* Drive forward briefly to clear the junction, then resume PID */
-                set_motor_speed(speed, speed, battery_voltage(dma_buffer));
-                HAL_Delay(120);
-                set_motor_speed(0, 0, battery_voltage(dma_buffer));
-            }
-            break;
-        }
-
-        case CROSS_JUNCTION:
-            HAL_Delay(100);
-            break;
-
-        case NO_JUNCTION:
-            break;
-
-        default:
-            break;
-    }
-}
-
-
-
-
-
-
-
 

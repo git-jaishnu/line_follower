@@ -12,11 +12,10 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import matplotlib
 matplotlib.use('TkAgg')
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import serial
 import serial.tools.list_ports
-import socket
 import threading
 import time
 from collections import deque
@@ -27,6 +26,12 @@ from datetime import datetime
 MAX_POINTS = 400
 PLOT_INTERVAL_MS = 60
 BAUD_OPTIONS = [9600, 19200, 38400, 57600, 115200]
+PACKET_LOG_MAX = 200
+
+JUNCTION_NAMES = {
+    0: "NONE", 1: "LEFT", 2: "RIGHT", 3: "T-JUNC",
+    4: "CROSS", 5: "DEAD END", 6: "FINISH",
+}
 
 # ── Dark palette ─────────────────────────────────────────────────────────────
 C = {
@@ -37,51 +42,6 @@ C = {
     'cyan': '#00f0ff', 'grid': '#2a2a3e', 'plotbg': '#0d0d1a',
     'setpoint': '#ffffff',
 }
-
-# ── Bluetooth Direct Wrapper ────────────────────────────────────────────────
-class BTSerialWrapper:
-    """Wrapper to make a Bluetooth socket behave like a Serial object."""
-    def __init__(self, mac_address):
-        self.mac = mac_address
-        self.sock = None
-        self.is_open = False
-
-    def open(self):
-        try:
-            # RFCOMM is the protocol used by HC-05/SPP
-            self.sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
-            self.sock.settimeout(5.0)
-            self.sock.connect((self.mac, 1)) # Channel 1 is standard for SPP
-            self.sock.setblocking(False)
-            self.is_open = True
-            return True
-        except Exception as e:
-            print(f"[BT] Connection failed: {e}")
-            return False
-
-    def read(self, n=1):
-        if not self.is_open: return b''
-        try:
-            return self.sock.recv(n)
-        except (BlockingIOError, socket.timeout, ConnectionResetError):
-            return b''
-
-    def write(self, data):
-        if not self.is_open: return 0
-        try:
-            return self.sock.send(data)
-        except Exception:
-            return 0
-
-    def close(self):
-        self.is_open = False
-        if self.sock:
-            self.sock.close()
-
-    @property
-    def in_waiting(self):
-        # We return 1 to trigger a read attempt in the main loop
-        return 1
 
 
 class PIDTuner:
@@ -105,20 +65,17 @@ class PIDTuner:
         self.lspd = deque(maxlen=MAX_POINTS)
         self.rspd = deque(maxlen=MAX_POINTS)
         self.batt = deque(maxlen=MAX_POINTS)
-        self.ir = [0] * 8
+
+        # Dynamic sensor count — auto-detected from first IR packet
+        self.n_sensors = 0
+        self.ir_snapshot = []
 
         self.lock = threading.Lock()
         self.t0 = None
         self.new_data = False
         self.paused = False
-        self.ir_flip = False             # flip IR bar display order
-        self.ir_snapshot = [0] * 8   # always 8 elements, guarded by self.lock
-
-        # Route planner
-        self.route_steps = []            # list of 'L','R','S' strings
-        self.route_ack   = ''            # last ACK/ERR string from robot
-        self.jct_step    = 0             # current junction step (from JS: telemetry)
-        self.jct_total   = 0            # total steps in loaded route
+        self.ir_flip = False
+        self.junction = 0
 
         # Recording
         self.recording = False
@@ -129,14 +86,33 @@ class PIDTuner:
         self._pkt_time = time.time()
         self._pkt_rate = 0
 
+        # Debug tab data
+        self._packet_log = deque(maxlen=PACKET_LOG_MAX)
+        self._latest = {
+            'error': 0, 'correction': 0, 'left': 0, 'right': 0,
+            'battery': 0, 'junction': 0, 'ir_raw': '',
+        }
+
         self._build_ui()
         self._build_plots()
+        self._build_debug_tab()
         self._tick()
 
     # ═════════════════════════════════════════════════════════════════════════
     #  UI
     # ═════════════════════════════════════════════════════════════════════════
     def _build_ui(self):
+        # ── Dark theme for Notebook tabs ─────────────────────────────────
+        style = ttk.Style()
+        style.theme_use('default')
+        style.configure('Dark.TNotebook', background=C['bg'], borderwidth=0)
+        style.configure('Dark.TNotebook.Tab',
+                        background=C['card'], foreground=C['text'],
+                        padding=[14, 6], font=('Segoe UI', 10, 'bold'))
+        style.map('Dark.TNotebook.Tab',
+                  background=[('selected', C['accent'])],
+                  foreground=[('selected', C['hl'])])
+
         # ── Top bar ──────────────────────────────────────────────────────
         top = tk.Frame(self.root, bg=C['card'], pady=7, padx=10)
         top.pack(fill='x')
@@ -149,9 +125,8 @@ class PIDTuner:
                  font=("Segoe UI", 10)).pack(side='left')
         self.port_var = tk.StringVar()
         self.port_cb = ttk.Combobox(top, textvariable=self.port_var,
-                                     width=17, state='normal')
+                                     width=11, state='readonly')
         self.port_cb.pack(side='left', padx=(2, 4))
-        self.port_cb.set("c4:92:df:d4:31:24")
         tk.Button(top, text="↻", command=self._refresh_ports, bg=C['accent'],
                   fg=C['text'], relief='flat', font=("Segoe UI", 10),
                   cursor='hand2').pack(side='left', padx=(0, 10))
@@ -184,6 +159,10 @@ class PIDTuner:
                                   font=("Segoe UI", 9))
         self.rate_lbl.pack(side='right')
 
+        self.sensor_lbl = tk.Label(top, text="Sensors: —", fg=C['dim'],
+                                    bg=C['card'], font=("Segoe UI", 9))
+        self.sensor_lbl.pack(side='right', padx=(0, 14))
+
         self._refresh_ports()
 
         # ── Body ─────────────────────────────────────────────────────────
@@ -201,30 +180,17 @@ class PIDTuner:
         self._card_status(left)
         self._card_data(left)
 
-        # Right panel — tabbed
-        right = tk.Frame(body, bg=C['bg'])
-        right.pack(side='left', fill='both', expand=True)
+        # Right panel — Notebook with tabs
+        self.notebook = ttk.Notebook(body, style='Dark.TNotebook')
+        self.notebook.pack(side='left', fill='both', expand=True)
 
-        style = ttk.Style()
-        style.theme_use('clam')
-        style.configure('Dark.TNotebook',        background=C['bg'],  borderwidth=0)
-        style.configure('Dark.TNotebook.Tab',    background=C['card'], foreground=C['dim'],
-                        padding=[14, 6], font=('Segoe UI', 10, 'bold'))
-        style.map('Dark.TNotebook.Tab',
-                  background=[('selected', C['accent'])],
-                  foreground=[('selected', C['text'])])
+        # Tab 1: PID Plots
+        self.plot_frame = tk.Frame(self.notebook, bg=C['plotbg'])
+        self.notebook.add(self.plot_frame, text='  📊 PID Plots  ')
 
-        self.nb = ttk.Notebook(right, style='Dark.TNotebook')
-        self.nb.pack(fill='both', expand=True)
-
-        # Tab 1 — PID Plots
-        self.plot_frame = tk.Frame(self.nb, bg=C['plotbg'])
-        self.nb.add(self.plot_frame, text='  📈 PID Plots  ')
-
-        # Tab 2 — Route Planner
-        self.route_frame = tk.Frame(self.nb, bg=C['bg'])
-        self.nb.add(self.route_frame, text='  🗺 Route Planner  ')
-        self._build_route_tab(self.route_frame)
+        # Tab 2: Debug Monitor
+        self.debug_frame = tk.Frame(self.notebook, bg=C['bg'])
+        self.notebook.add(self.debug_frame, text='  🔍 Debug Monitor  ')
 
     def _card(self, parent, title):
         f = tk.LabelFrame(parent, text=f"  {title}  ", fg=C['hl'],
@@ -385,49 +351,37 @@ class PIDTuner:
         self._style_ax(self.ax2)
 
         # ── Plot 3 (bottom-right): IR sensor live bar chart ──────────────────
+        # Bars are created dynamically when sensor count is auto-detected
         self.ax3 = self.fig.add_subplot(gs[1, 1])
         self.ax3.set_facecolor(C['plotbg'])
-        n_sens = 8
-        self.ir_bars = self.ax3.bar(
-            range(n_sens), [0] * n_sens,
-            color=C['cyan'], alpha=0.80,
-            edgecolor=C['grid'], linewidth=0.6
-        )
         self.ax3.set_ylim(0, 4095)
-        self.ax3.set_xlim(-0.6, n_sens - 0.4)
-        self.ax3.set_xticks(range(n_sens))
-        # S1 = first value received (ADC CH0), S8 = last (ADC CH7)
-        # Use ⇄ Flip IR button if your physical order is reversed
-        self.ax3.set_xticklabels([f'S{i+1}' for i in range(n_sens)], fontsize=7)
-        self.ax3.set_xlabel('S1=ADC-CH0 → S8=ADC-CH7  (⇄ Flip if reversed)',
-                            color=C['dim'], fontsize=7)
-        self.ax3.set_title('IR Sensors (live)', color=C['hl'],
+        self.ax3.set_title('IR Sensors (waiting...)', color=C['hl'],
                             fontsize=11, fontweight='bold', pad=6)
         self._style_ax(self.ax3)
+        self.ir_bars = []
 
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
         self.canvas.get_tk_widget().pack(fill='both', expand=True)
 
-        # ── Matplotlib navigation toolbar (zoom / pan / home / save) ─────────
-        tb_frame = tk.Frame(self.plot_frame, bg='#1c1c2e')
-        tb_frame.pack(fill='x', side='bottom')
-        self.toolbar = NavigationToolbar2Tk(self.canvas, tb_frame)
-        self.toolbar.config(background='#1c1c2e')
-        for child in self.toolbar.winfo_children():
-            try:
-                child.config(background='#1c1c2e', foreground=C['text'])
-            except Exception:
-                pass
-        self.toolbar.update()
-
-        # Auto-scale toggle — disable when user is zoomed/panned
-        self._autoscale = tk.BooleanVar(value=True)
-        tk.Checkbutton(
-            tb_frame, text='Auto-scale Y', variable=self._autoscale,
-            bg='#1c1c2e', fg=C['dim'], selectcolor='#0f3460',
-            activebackground='#1c1c2e', activeforeground=C['text'],
-            font=('Segoe UI', 9), cursor='hand2'
-        ).pack(side='right', padx=8)
+    def _rebuild_ir_bars(self, n):
+        """Rebuild IR bar chart when sensor count changes."""
+        self.ax3.cla()
+        self.ax3.set_facecolor(C['plotbg'])
+        self.ir_bars = self.ax3.bar(
+            range(n), [0] * n,
+            color=C['cyan'], alpha=0.80,
+            edgecolor=C['grid'], linewidth=0.6
+        )
+        self.ax3.set_ylim(0, 4095)
+        self.ax3.set_xlim(-0.6, n - 0.4)
+        self.ax3.set_xticks(range(n))
+        self.ax3.set_xticklabels([f'S{i+1}' for i in range(n)], fontsize=7)
+        self.ax3.set_xlabel(
+            f'S1=ADC-CH0 → S{n}=ADC-CH{n-1}  (⇄ Flip if reversed)',
+            color=C['dim'], fontsize=7)
+        self.ax3.set_title(f'IR Sensors ×{n} (live)', color=C['hl'],
+                            fontsize=11, fontweight='bold', pad=6)
+        self._style_ax(self.ax3)
 
     def _style_ax(self, ax, right=False):
         ax.set_facecolor(C['plotbg'])
@@ -447,6 +401,224 @@ class PIDTuner:
             ax.grid(True, color=C['grid'], alpha=0.4, ls='--', lw=0.5)
 
     # ═════════════════════════════════════════════════════════════════════════
+    #  DEBUG MONITOR TAB
+    # ═════════════════════════════════════════════════════════════════════════
+    def _build_debug_tab(self):
+        # Main scrollable area
+        outer = tk.Frame(self.debug_frame, bg=C['bg'])
+        outer.pack(fill='both', expand=True, padx=10, pady=8)
+
+        # ── Section 1: DMA Buffer / Raw ADC ─────────────────────────────
+        sec1 = tk.LabelFrame(outer, text="  DMA Buffer / Raw ADC Values  ",
+                              fg=C['hl'], bg=C['card'],
+                              font=("Segoe UI", 11, "bold"),
+                              bd=1, relief='groove', padx=12, pady=8)
+        sec1.pack(fill='x', pady=(0, 8))
+
+        self.dma_canvas = tk.Canvas(sec1, bg=C['card'], height=120,
+                                     highlightthickness=0)
+        self.dma_canvas.pack(fill='x')
+        self._dma_items = []  # (bar_id, text_id, label_id) per sensor
+
+        # ── Section 2: Telemetry Values ─────────────────────────────────
+        sec2 = tk.LabelFrame(outer, text="  Telemetry Values  ",
+                              fg=C['hl'], bg=C['card'],
+                              font=("Segoe UI", 11, "bold"),
+                              bd=1, relief='groove', padx=12, pady=8)
+        sec2.pack(fill='x', pady=(0, 8))
+
+        tele_grid = tk.Frame(sec2, bg=C['card'])
+        tele_grid.pack(fill='x')
+
+        self.dbg_vars = {}
+        tele_items = [
+            ("Battery",    "battery",    C['green'],  "V"),
+            ("Error",      "error",      C['cyan'],   ""),
+            ("Correction", "correction", C['orange'], ""),
+            ("Left Speed", "left",       C['blue'],   "PWM"),
+            ("Right Speed","right",      C['purple'], "PWM"),
+            ("Junction",   "junction",   C['hl'],     ""),
+        ]
+        for idx, (label, key, color, unit) in enumerate(tele_items):
+            row = idx // 3
+            col = idx % 3
+            f = tk.Frame(tele_grid, bg=C['card2'], padx=10, pady=6)
+            f.grid(row=row, column=col, padx=4, pady=3, sticky='nsew')
+            tele_grid.columnconfigure(col, weight=1)
+
+            tk.Label(f, text=label, fg=C['dim'], bg=C['card2'],
+                     font=("Segoe UI", 9)).pack(anchor='w')
+            v = tk.StringVar(value="—")
+            tk.Label(f, textvariable=v, fg=color, bg=C['card2'],
+                     font=("Consolas", 16, "bold")).pack(anchor='w')
+            if unit:
+                tk.Label(f, text=unit, fg=C['dim'], bg=C['card2'],
+                         font=("Segoe UI", 8)).pack(anchor='w')
+            self.dbg_vars[key] = v
+
+        # ── Section 3: Sensor Detection Bar ─────────────────────────────
+        sec3 = tk.LabelFrame(outer, text="  Sensor Detection (low ADC = line detected)  ",
+                              fg=C['hl'], bg=C['card'],
+                              font=("Segoe UI", 11, "bold"),
+                              bd=1, relief='groove', padx=12, pady=8)
+        sec3.pack(fill='x', pady=(0, 8))
+
+        self.detect_canvas = tk.Canvas(sec3, bg=C['card'], height=50,
+                                        highlightthickness=0)
+        self.detect_canvas.pack(fill='x')
+        self._detect_items = []
+
+        # ── Section 4: Raw Command ──────────────────────────────────────
+        sec4 = tk.LabelFrame(outer, text="  Send Raw Command  ",
+                              fg=C['hl'], bg=C['card'],
+                              font=("Segoe UI", 11, "bold"),
+                              bd=1, relief='groove', padx=12, pady=8)
+        sec4.pack(fill='x', pady=(0, 8))
+
+        cmd_row = tk.Frame(sec4, bg=C['card'])
+        cmd_row.pack(fill='x')
+        self.raw_cmd = tk.StringVar()
+        tk.Entry(cmd_row, textvariable=self.raw_cmd, bg=C['card2'],
+                 fg=C['text'], insertbackground=C['text'], relief='flat',
+                 font=("Consolas", 11), bd=2).pack(side='left', fill='x',
+                                                     expand=True, padx=(0, 6))
+        tk.Button(cmd_row, text="Send", command=self._send_raw,
+                  bg=C['blue'], fg='#fff', relief='flat',
+                  font=("Segoe UI", 10, "bold"), padx=16,
+                  cursor='hand2').pack(side='left')
+
+        # ── Section 5: Packet Log ───────────────────────────────────────
+        sec5 = tk.LabelFrame(outer, text="  Packet Log  ",
+                              fg=C['hl'], bg=C['card'],
+                              font=("Segoe UI", 11, "bold"),
+                              bd=1, relief='groove', padx=12, pady=8)
+        sec5.pack(fill='both', expand=True)
+
+        log_frame = tk.Frame(sec5, bg=C['card'])
+        log_frame.pack(fill='both', expand=True)
+
+        sb = tk.Scrollbar(log_frame)
+        sb.pack(side='right', fill='y')
+
+        self.pkt_log_text = tk.Text(log_frame, bg=C['plotbg'], fg=C['green'],
+                                     font=("Consolas", 9), wrap='none',
+                                     relief='flat', padx=8, pady=6, height=8,
+                                     yscrollcommand=sb.set, state='disabled')
+        self.pkt_log_text.pack(fill='both', expand=True)
+        sb.config(command=self.pkt_log_text.yview)
+
+        # Clear log button
+        tk.Button(sec5, text="🗑 Clear Log", command=self._clear_log,
+                  bg=C['accent'], fg=C['text'], relief='flat',
+                  font=("Segoe UI", 9), cursor='hand2').pack(anchor='e',
+                                                               pady=(4, 0))
+
+    def _send_raw(self):
+        cmd = self.raw_cmd.get().strip()
+        if cmd:
+            self._send(cmd)
+            self.raw_cmd.set("")
+
+    def _clear_log(self):
+        with self.lock:
+            self._packet_log.clear()
+        self.pkt_log_text.config(state='normal')
+        self.pkt_log_text.delete('1.0', 'end')
+        self.pkt_log_text.config(state='disabled')
+
+    def _update_debug(self):
+        """Update debug monitor tab values — called from _tick on main thread."""
+        with self.lock:
+            latest = dict(self._latest)
+            ir = list(reversed(self.ir_snapshot)) if self.ir_flip else list(self.ir_snapshot)
+            n = self.n_sensors
+            log_lines = list(self._packet_log)
+
+        # Telemetry values
+        self.dbg_vars['battery'].set(f"{latest['battery']:.2f}")
+        self.dbg_vars['error'].set(f"{latest['error']:.1f}")
+        self.dbg_vars['correction'].set(f"{latest['correction']:.1f}")
+        self.dbg_vars['left'].set(str(latest['left']))
+        self.dbg_vars['right'].set(str(latest['right']))
+        jc = latest['junction']
+        self.dbg_vars['junction'].set(
+            f"{jc} — {JUNCTION_NAMES.get(jc, 'UNKNOWN')}")
+
+        # DMA buffer bars (canvas)
+        if n > 0 and ir:
+            self._draw_dma_bars(ir, n)
+            self._draw_detect_bar(ir, n)
+
+        # Packet log (only update every few ticks to avoid lag)
+        if log_lines:
+            self.pkt_log_text.config(state='normal')
+            self.pkt_log_text.delete('1.0', 'end')
+            # Show last 50 lines
+            for ln in log_lines[-50:]:
+                self.pkt_log_text.insert('end', ln + '\n')
+            self.pkt_log_text.see('end')
+            self.pkt_log_text.config(state='disabled')
+
+    def _draw_dma_bars(self, ir_vals, n):
+        """Draw vertical bars on DMA canvas showing raw ADC values."""
+        c = self.dma_canvas
+        c.delete('all')
+        w = c.winfo_width() or 600
+        h = c.winfo_height() or 120
+        if n == 0:
+            return
+
+        bar_w = max(20, (w - 20) // n - 6)
+        gap = (w - bar_w * n) / (n + 1)
+
+        for i, val in enumerate(ir_vals[:n]):
+            x = gap + i * (bar_w + gap)
+            bar_h = (val / 4095.0) * (h - 35)
+            y_top = h - 15 - bar_h
+
+            # Bar
+            ratio = val / 4095.0
+            color = C['hl'] if ratio < 0.45 else C['cyan']
+            c.create_rectangle(x, y_top, x + bar_w, h - 15,
+                               fill=color, outline=C['grid'], width=1)
+            # Value text
+            c.create_text(x + bar_w / 2, y_top - 8,
+                          text=str(val), fill=C['text'],
+                          font=("Consolas", 9, "bold"), anchor='s')
+            # Channel label
+            c.create_text(x + bar_w / 2, h - 5,
+                          text=f"CH{i}", fill=C['dim'],
+                          font=("Segoe UI", 8), anchor='s')
+
+    def _draw_detect_bar(self, ir_vals, n):
+        """Draw horizontal detection indicator showing which sensors see the line."""
+        c = self.detect_canvas
+        c.delete('all')
+        w = c.winfo_width() or 600
+        h = c.winfo_height() or 50
+        if n == 0:
+            return
+
+        cell_w = max(30, (w - 20) // n)
+        gap = (w - cell_w * n) / (n + 1)
+
+        for i, val in enumerate(ir_vals[:n]):
+            x = gap + i * (cell_w + gap)
+            ratio = val / 4095.0
+            detected = ratio < 0.45
+
+            # Detection cell
+            fill = C['hl'] if detected else C['card2']
+            c.create_rectangle(x, 5, x + cell_w, h - 5,
+                               fill=fill, outline=C['grid'], width=1)
+            # Label
+            txt_color = '#fff' if detected else C['dim']
+            label = f"S{i+1}\n●" if detected else f"S{i+1}\n○"
+            c.create_text(x + cell_w / 2, h / 2,
+                          text=label, fill=txt_color,
+                          font=("Segoe UI", 9, "bold"), anchor='center')
+
+    # ═════════════════════════════════════════════════════════════════════════
     #  SERIAL
     # ═════════════════════════════════════════════════════════════════════════
     def _refresh_ports(self):
@@ -456,21 +628,13 @@ class PIDTuner:
             self.port_var.set(ports[0])
 
     def _connect(self):
-        port = self.port_var.get().strip()
+        port = self.port_var.get()
         baud = int(self.baud_var.get())
         if not port:
-            messagebox.showwarning("No port", "Select a COM port or enter a MAC Address.")
+            messagebox.showwarning("No port", "Select a COM port first.")
             return
-
         try:
-            # Check if it looks like a MAC address (XX:XX:XX:XX:XX:XX)
-            if len(port) == 17 and port.count(':') == 5:
-                self.ser = BTSerialWrapper(port)
-                if not self.ser.open():
-                    raise Exception("Could not connect to Bluetooth MAC.")
-            else:
-                self.ser = serial.Serial(port, baud, timeout=0.1)
-
+            self.ser = serial.Serial(port, baud, timeout=0.1)
             self.running = True
             self.thread = threading.Thread(target=self._reader, daemon=True)
             self.thread.start()
@@ -478,9 +642,8 @@ class PIDTuner:
             self.conn_btn.config(state='disabled')
             self.disc_btn.config(state='normal')
             self.t0 = time.time()
-        except Exception as e:
+        except serial.SerialException as e:
             messagebox.showerror("Connection failed", str(e))
-            self.ser = None
 
     def _disconnect(self):
         self.running = False
@@ -511,7 +674,7 @@ class PIDTuner:
                 break
 
     def _parse(self, line):
-        """Parse: IR:v0,v1,...;PL:left;PR:right;BV:bat;PE:error;PO:correction"""
+        """Parse: IR:v0,v1,...;PL:left;PR:right;BV:bat;PE:error;PO:correction;JC:junction"""
         vals = {}
         try:
             for part in line.split(';'):
@@ -525,16 +688,7 @@ class PIDTuner:
 
         # Must have at least one known telemetry key
         if not any(k in vals for k in ('PE', 'BV', 'PL', 'PR', 'PO')):
-            # Check for ACK:ROUTE:N  (sent as a standalone line by STM)
-            if line.startswith('ACK:ROUTE:'):
-                try:
-                    n = int(line.split(':')[2])
-                    self.route_ack = f'✅ ACK — {n} steps loaded'
-                except Exception:
-                    self.route_ack = '✅ ACK received'
-                self.root.after(0, self._refresh_ack_label)
-            else:
-                print(f"[parse] unrecognised packet: {line[:80]}")
+            print(f"[parse] unrecognised packet: {line[:80]}")
             return
 
         now = time.time() - (self.t0 or time.time())
@@ -544,25 +698,23 @@ class PIDTuner:
             left       = int(float(vals.get('PL', 0)))
             right      = int(float(vals.get('PR', 0)))
             battery    = float(vals.get('BV', 0))
+            junction   = int(float(vals.get('JC', 0)))
         except (ValueError, TypeError) as e:
             print(f"[parse] conversion error: {e} in '{line[:80]}'")
             return
 
-        # Parse IR values — always produce exactly 8 elements, store under lock
+        # Parse IR values — auto-detect sensor count from data
         ir_str = vals.get('IR', '')
-        ir_vals = [0] * 8
+        ir_vals = []
         if ir_str:
             try:
-                parsed = [int(x) for x in ir_str.split(',') if x.strip()]
-                for i, v in enumerate(parsed[:8]):
-                    ir_vals[i] = v
-                # ── DEBUG: print every 50th packet so you can verify order ──
-                if self._pkt_count % 50 == 0:
-                    bar_str = '  '.join(f'S{i+1}={v:4d}' for i, v in enumerate(ir_vals))
-                    print(f"[IR debug] raw=\"{ir_str}\"")
-                    print(f"[IR debug] bars: {bar_str}")
+                ir_vals = [int(x) for x in ir_str.split(',') if x.strip()]
             except Exception:
-                pass
+                ir_vals = []
+
+        # Auto-detect / update sensor count
+        new_n = len(ir_vals) if ir_vals else self.n_sensors
+        need_rebuild = (new_n != self.n_sensors and new_n > 0)
 
         with self.lock:
             self.t.append(now)
@@ -572,38 +724,44 @@ class PIDTuner:
             self.lspd.append(left)
             self.rspd.append(right)
             self.batt.append(battery)
-            self.ir_snapshot = ir_vals   # always 8 elements, written under lock
+            self.junction = junction
+            if ir_vals:
+                self.ir_snapshot = ir_vals
+                self.n_sensors = len(ir_vals)
             self.new_data = True
+
+            # Debug tab data
+            self._latest = {
+                'error': error, 'correction': correction,
+                'left': left, 'right': right,
+                'battery': battery, 'junction': junction,
+                'ir_raw': ir_str,
+            }
+            self._packet_log.append(
+                f"[{now:7.2f}s] {line[:120]}"
+            )
 
             # Recording
             if self.recording:
                 self.rec_data.append({
                     'time': now, 'error': error, 'correction': correction,
                     'left': left, 'right': right, 'battery': battery,
-                    'ir': ir_str,
+                    'ir': ir_str, 'junction': junction,
                 })
 
+        # Rebuild IR bars on main thread if sensor count changed
+        if need_rebuild:
+            self.root.after(0, lambda n=new_n: self._rebuild_ir_bars(n))
+            self.root.after(0, lambda n=new_n: self.sensor_lbl.config(
+                text=f"Sensors: {n}", fg=C['green']))
+
         # ── Update live display safely from the main thread ──────────────────
-        # Tkinter is NOT thread-safe: never call StringVar.set() from a
-        # background thread.  Queue the update via root.after(0, ...).
-
-        # Parse junction step progress (JS:step/total)
-        js_str = vals.get('JS', '')
-        if js_str and '/' in js_str:
-            try:
-                sp, tot = js_str.split('/')
-                self.jct_step  = int(sp)
-                self.jct_total = int(tot)
-            except Exception:
-                pass
-
         def _update_ui():
             self.sv['err'].set(f"{error:.1f}")
             self.sv['corr'].set(f"{correction:.1f}")
             self.sv['left'].set(str(left))
             self.sv['right'].set(str(right))
             self.sv['batt'].set(f"{battery:.1f} V")
-            self._refresh_route_progress()
         self.root.after(0, _update_ui)
 
         # Packet rate
@@ -863,16 +1021,14 @@ class PIDTuner:
             self.line_corr.set_data(t, co)
 
             # Compute Y-limits directly from data (relim+autoscale is broken on twinx)
-            # Only auto-scale when the checkbox is on (user may be zoomed)
-            if self._autoscale.get():
-                if er:
-                    e_lo, e_hi = min(min(er), 0), max(max(er), 0)
-                    pad = max((e_hi - e_lo) * 0.1, 50)  # 10% padding, min ±50
-                    self.ax1.set_ylim(e_lo - pad, e_hi + pad)
-                if co:
-                    c_lo, c_hi = min(min(co), 0), max(max(co), 0)
-                    pad = max((c_hi - c_lo) * 0.1, 50)  # 10% padding, min ±50
-                    self.ax1_r.set_ylim(c_lo - pad, c_hi + pad)
+            if er:
+                e_lo, e_hi = min(min(er), 0), max(max(er), 0)
+                pad = max((e_hi - e_lo) * 0.1, 4)  # 10% padding, min ±4
+                self.ax1.set_ylim(e_lo - pad, e_hi + pad)
+            if co:
+                c_lo, c_hi = min(min(co), 0), max(max(co), 0)
+                pad = max((c_hi - c_lo) * 0.1, 50)  # 10% padding, min ±50
+                self.ax1_r.set_ylim(c_lo - pad, c_hi + pad)
             # Shared X-axis for both time-series charts
             if t:
                 self.ax1.set_xlim(t[0], t[-1])
@@ -887,255 +1043,22 @@ class PIDTuner:
                 pad = max((s_hi - s_lo) * 0.1, 20)
                 self.ax2.set_ylim(s_lo - pad, s_hi + pad)
 
-            # ── IR sensor bars (always 8 elements) ───────────────────────────
-            for i, (bar, val) in enumerate(zip(self.ir_bars, ir)):
-                bar.set_height(val)
-                # LOW ADC = line detected (dark tape absorbs IR)
-                # HIGH ADC = off line (reflective surface)
-                # Flip colour so detected sensor glows red
-                ratio = val / 4095.0
-                bar.set_color(C['hl'] if ratio < 0.45 else C['cyan'])
+            # ── IR sensor bars (dynamic count) ───────────────────────────
+            if self.ir_bars and ir:
+                for i, (bar, val) in enumerate(zip(self.ir_bars, ir)):
+                    bar.set_height(val)
+                    ratio = val / 4095.0
+                    bar.set_color(C['hl'] if ratio < 0.45 else C['cyan'])
 
             self.canvas.draw_idle()
+
+        # Update debug tab
+        self._update_debug()
 
         # Update packet-rate label
         self.rate_lbl.config(text=f"{self._pkt_rate:.0f} pkt/s")
 
         self.root.after(PLOT_INTERVAL_MS, self._tick)
-
-    # ═════════════════════════════════════════════════════════════════════════
-    #  ROUTE PLANNER TAB
-    # ═════════════════════════════════════════════════════════════════════════
-    _STEP_CFG = {
-        'L': {'label': '◀  LEFT',  'bg': '#4da6ff', 'fg': '#000'},
-        'R': {'label': 'RIGHT  ▶', 'bg': '#a855f7', 'fg': '#fff'},
-        'S': {'label': '▲ STRAIGHT','bg': '#00d4aa', 'fg': '#000'},
-    }
-
-    def _build_route_tab(self, parent):
-        """Build the Route Planner tab UI."""
-        # ── Title ────────────────────────────────────────────────────────────
-        hdr = tk.Frame(parent, bg=C['bg'])
-        hdr.pack(fill='x', padx=18, pady=(16, 4))
-        tk.Label(hdr, text='🗺  Junction Route Planner',
-                 font=('Segoe UI', 16, 'bold'), fg=C['hl'], bg=C['bg']
-                 ).pack(side='left')
-        tk.Label(hdr, text='Build the turn sequence the robot will follow at T-junctions',
-                 font=('Segoe UI', 10), fg=C['dim'], bg=C['bg']
-                 ).pack(side='left', padx=(14, 0))
-
-        # ── Step builder buttons ─────────────────────────────────────────────
-        btn_row = tk.Frame(parent, bg=C['bg'])
-        btn_row.pack(fill='x', padx=18, pady=(4, 2))
-        tk.Label(btn_row, text='Add step:', font=('Segoe UI', 10),
-                 fg=C['dim'], bg=C['bg']).pack(side='left', padx=(0, 10))
-        for key in ('L', 'R', 'S'):
-            cfg = self._STEP_CFG[key]
-            tk.Button(btn_row, text=cfg['label'],
-                      command=lambda k=key: self._add_step(k),
-                      bg=cfg['bg'], fg=cfg['fg'], relief='flat',
-                      font=('Segoe UI', 12, 'bold'), padx=22, pady=8,
-                      cursor='hand2'
-                      ).pack(side='left', padx=5)
-
-        # ── Presets ──────────────────────────────────────────────────────────
-        pre_row = tk.Frame(parent, bg=C['bg'])
-        pre_row.pack(fill='x', padx=18, pady=(2, 6))
-        tk.Label(pre_row, text='Presets:', font=('Segoe UI', 10),
-                 fg=C['dim'], bg=C['bg']).pack(side='left', padx=(0, 10))
-        presets = [
-            ('All Left',    list('LLLLLLLL')),
-            ('All Right',   list('RRRRRRRR')),
-            ('All Straight',list('SSSSSSSS')),
-            ('L-R-S × 3',  list('LRSLRSLRS')),
-        ]
-        for name, seq in presets:
-            tk.Button(pre_row, text=name,
-                      command=lambda s=seq: self._load_preset(s),
-                      bg=C['accent'], fg=C['text'], relief='flat',
-                      font=('Segoe UI', 9), padx=10, pady=4,
-                      cursor='hand2'
-                      ).pack(side='left', padx=3)
-
-        # ── Sequence tile strip (scrollable) ─────────────────────────────────
-        strip_lf = tk.LabelFrame(parent, text='  Instruction Sequence  ',
-                                 fg=C['hl'], bg=C['card'],
-                                 font=('Segoe UI', 10, 'bold'),
-                                 bd=1, relief='groove')
-        strip_lf.pack(fill='x', padx=18, pady=(0, 6))
-
-        canvas_h = 80
-        self._tile_canvas = tk.Canvas(strip_lf, height=canvas_h,
-                                      bg=C['card'], bd=0, highlightthickness=0)
-        self._tile_canvas.pack(side='left', fill='both', expand=True)
-        tile_sb = tk.Scrollbar(strip_lf, orient='horizontal',
-                               command=self._tile_canvas.xview)
-        tile_sb.pack(side='bottom', fill='x')
-        self._tile_canvas.configure(xscrollcommand=tile_sb.set)
-
-        self._tile_inner = tk.Frame(self._tile_canvas, bg=C['card'])
-        self._tile_canvas_win = self._tile_canvas.create_window(
-            (0, 0), window=self._tile_inner, anchor='nw')
-        self._tile_inner.bind('<Configure>',
-            lambda e: self._tile_canvas.configure(
-                scrollregion=self._tile_canvas.bbox('all')))
-
-        # ── Step counter label ───────────────────────────────────────────────
-        self._step_count_var = tk.StringVar(value='0 steps')
-        tk.Label(parent, textvariable=self._step_count_var,
-                 font=('Consolas', 11), fg=C['cyan'], bg=C['bg']
-                 ).pack(anchor='w', padx=22)
-
-        # ── Action buttons ───────────────────────────────────────────────────
-        act_row = tk.Frame(parent, bg=C['bg'])
-        act_row.pack(fill='x', padx=18, pady=(4, 6))
-        tk.Button(act_row, text='↩ Undo', command=self._undo_step,
-                  bg=C['accent'], fg=C['text'], relief='flat',
-                  font=('Segoe UI', 10, 'bold'), padx=14, cursor='hand2'
-                  ).pack(side='left', padx=(0, 6))
-        tk.Button(act_row, text='🗑 Clear All', command=self._clear_route,
-                  bg=C['accent'], fg=C['text'], relief='flat',
-                  font=('Segoe UI', 10, 'bold'), padx=14, cursor='hand2'
-                  ).pack(side='left', padx=(0, 20))
-        tk.Button(act_row, text='📡 Send Route to Robot', command=self._send_route,
-                  bg=C['hl'], fg='#fff', relief='flat',
-                  font=('Segoe UI', 12, 'bold'), padx=24, pady=6,
-                  cursor='hand2'
-                  ).pack(side='left')
-
-        # ── ACK label ────────────────────────────────────────────────────────
-        self._ack_var = tk.StringVar(value='— not sent yet —')
-        tk.Label(parent, textvariable=self._ack_var,
-                 font=('Segoe UI', 11, 'bold'), fg=C['orange'], bg=C['bg']
-                 ).pack(anchor='w', padx=22, pady=(0, 8))
-
-        # ── Live progress ────────────────────────────────────────────────────
-        prog_lf = tk.LabelFrame(parent, text='  Live Progress (from robot telemetry)  ',
-                                fg=C['hl'], bg=C['card'],
-                                font=('Segoe UI', 10, 'bold'),
-                                bd=1, relief='groove')
-        prog_lf.pack(fill='x', padx=18, pady=(0, 10))
-
-        self._prog_canvas = tk.Canvas(prog_lf, height=canvas_h,
-                                      bg=C['card'], bd=0, highlightthickness=0)
-        self._prog_canvas.pack(side='left', fill='both', expand=True)
-        prog_sb = tk.Scrollbar(prog_lf, orient='horizontal',
-                               command=self._prog_canvas.xview)
-        prog_sb.pack(side='bottom', fill='x')
-        self._prog_canvas.configure(xscrollcommand=prog_sb.set)
-
-        self._prog_inner = tk.Frame(self._prog_canvas, bg=C['card'])
-        self._prog_canvas_win = self._prog_canvas.create_window(
-            (0, 0), window=self._prog_inner, anchor='nw')
-        self._prog_inner.bind('<Configure>',
-            lambda e: self._prog_canvas.configure(
-                scrollregion=self._prog_canvas.bbox('all')))
-
-        self._prog_label_var = tk.StringVar(value='Step —/—')
-        tk.Label(prog_lf, textvariable=self._prog_label_var,
-                 font=('Consolas', 10), fg=C['dim'], bg=C['card']
-                 ).pack(side='right', padx=8)
-
-    # ── Route builder helpers ─────────────────────────────────────────────────
-    def _add_step(self, key):
-        if len(self.route_steps) >= 32:
-            return
-        self.route_steps.append(key)
-        self._refresh_route_display()
-
-    def _load_preset(self, seq):
-        self.route_steps = list(seq[:32])
-        self._refresh_route_display()
-
-    def _undo_step(self):
-        if self.route_steps:
-            self.route_steps.pop()
-            self._refresh_route_display()
-
-    def _clear_route(self):
-        self.route_steps.clear()
-        self._refresh_route_display()
-
-    def _send_route(self):
-        if not self.route_steps:
-            from tkinter import messagebox
-            messagebox.showwarning('Empty Route', 'Add at least one step before sending.')
-            return
-        cmd = 'ROUTE:' + ','.join(self.route_steps)
-        self._send(cmd)
-        self._ack_var.set('📡 Sent — waiting for ACK…')
-
-    def _refresh_route_display(self):
-        """Rebuild the instruction tile strip."""
-        for w in self._tile_inner.winfo_children():
-            w.destroy()
-
-        for idx, key in enumerate(self.route_steps):
-            cfg = self._STEP_CFG.get(key, self._STEP_CFG['S'])
-            cell = tk.Frame(self._tile_inner, bg=cfg['bg'],
-                            relief='flat', bd=0)
-            cell.pack(side='left', padx=3, pady=8)
-            tk.Label(cell, text=f'{idx+1}', font=('Segoe UI', 7),
-                     fg=cfg['fg'], bg=cfg['bg']).pack()
-            tk.Label(cell, text=key, font=('Consolas', 16, 'bold'),
-                     fg=cfg['fg'], bg=cfg['bg'], padx=12, pady=2).pack()
-            # Click tile to delete it
-            for w in cell.winfo_children():
-                w.bind('<Button-1>', lambda e, i=idx: self._delete_step(i))
-            cell.bind('<Button-1>', lambda e, i=idx: self._delete_step(i))
-            cell.config(cursor='hand2')
-
-        self._step_count_var.set(f'{len(self.route_steps)} steps  (click a tile to remove)')
-        self._tile_canvas.update_idletasks()
-        self._tile_canvas.configure(
-            scrollregion=self._tile_canvas.bbox('all'))
-
-    def _delete_step(self, idx):
-        if 0 <= idx < len(self.route_steps):
-            self.route_steps.pop(idx)
-            self._refresh_route_display()
-
-    def _refresh_ack_label(self):
-        """Called from main thread when an ACK packet is parsed."""
-        self._ack_var.set(self.route_ack)
-
-    def _refresh_route_progress(self):
-        """Update the live-progress tile strip based on JS: telemetry."""
-        # Guard: widget may not exist if route tab hasn't been built yet
-        if not hasattr(self, '_prog_inner'):
-            return
-
-        steps = self.route_steps
-        step  = self.jct_step   # 0-based next step index (counter in STM)
-        total = self.jct_total  # total steps in the loaded list
-
-        for w in self._prog_inner.winfo_children():
-            w.destroy()
-
-        for idx, key in enumerate(steps):
-            cfg = self._STEP_CFG.get(key, self._STEP_CFG['S'])
-            done    = (idx < step)
-            current = (idx == step) and (step < total if total else False)
-            if done:
-                bg, fg = '#2a2a3e', C['dim']
-            elif current:
-                bg, fg = cfg['bg'], cfg['fg']
-            else:
-                bg, fg = '#1a1a2e', C['dim']
-
-            cell = tk.Frame(self._prog_inner, bg=bg, relief='flat', bd=0)
-            cell.pack(side='left', padx=3, pady=8)
-            tk.Label(cell, text=f'{idx+1}', font=('Segoe UI', 7),
-                     fg=fg, bg=bg).pack()
-            lbl_text = ('✓' if done else key) if not current else key
-            tk.Label(cell, text=lbl_text, font=('Consolas', 16, 'bold'),
-                     fg=fg, bg=bg, padx=12, pady=2).pack()
-
-        self._prog_label_var.set(
-            f'Step {step}/{total if total else len(steps)}')
-        self._prog_canvas.update_idletasks()
-        self._prog_canvas.configure(
-            scrollregion=self._prog_canvas.bbox('all'))
 
     def on_close(self):
         self.running = False

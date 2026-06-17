@@ -131,12 +131,18 @@ void binarizeSensors(Sensor_Array *sensor_array)
 int get_line_error(Sensor_Array *sensor_array) {
 	long adc_sum = 0;
     long weighted_sum = 0;
+    static int last_error = 0;
+
     for(int i = 0 ; i < NUM_SENSORS ; i++){
-    	weighted_sum += (sensor_array->array[i].mapped_value)*(sensor_array->array[i].weight);
+    	weighted_sum += (long)(sensor_array->array[i].mapped_value) * (sensor_array->array[i].weight);
     	adc_sum += sensor_array->array[i].mapped_value;
     }
 
-    return ((int)(weighted_sum)/(int)adc_sum);
+    if (adc_sum == 0) return last_error;
+
+    int out = (int)((weighted_sum * 50) / adc_sum);
+    last_error = out;
+    return out;
 }
 
 int get_line_error_digital(Sensor_Array* sensor_array) {
@@ -157,7 +163,7 @@ int get_line_error_digital(Sensor_Array* sensor_array) {
 
     float true_position = weighted_sum / active_sensors;
 
-    int out = (int)(true_position * 50);
+    int out = (int)(true_position);
 
     last_error = out;
 
@@ -169,17 +175,20 @@ int get_line_error_digital(Sensor_Array* sensor_array) {
 
 
 int calculate_pid(PID_Controller *pid, int error, float dt) {
-
+    if (dt <= 0.0f) dt = 0.001f; // Default to 1ms if dt is invalid
 
     float P = pid->Kp * error;
 
     pid->integral += (error * dt);
+    // Use a separate integral limit or cap its contribution
     if (pid->integral > pid->limit) pid->integral = pid->limit;
     if (pid->integral < -pid->limit) pid->integral = -pid->limit;
     float I = pid->Ki * pid->integral;
 
-
-    float D = pid->Kd * (error - pid->last_error) / dt;
+    float D = 0;
+    if (dt > 0) {
+        D = pid->Kd * (error - pid->last_error) / dt;
+    }
     pid->last_error = error;
 
     float output = P + I + D;
@@ -187,7 +196,7 @@ int calculate_pid(PID_Controller *pid, int error, float dt) {
     if (output > pid->limit) return (int)pid->limit;
     if (output < -pid->limit) return (int)-pid->limit;
 
-    return (int)output;
+    return (int)(output*50);
 }
 
 
@@ -259,8 +268,6 @@ JunctionType detect_junction_digital(Sensor_Array *sensor_array) {
 
     return NO_JUNCTION;
 }
-
-
 
 
 

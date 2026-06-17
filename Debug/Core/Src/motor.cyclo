@@ -2,6 +2,4 @@
 ../Core/Src/motor.c:55:6:follow_line	1
 ../Core/Src/motor.c:67:6:swing_turn_left	3
 ../Core/Src/motor.c:96:6:swing_turn_right	3
-../Core/Src/motor.c:127:6:reset_junction_counter	1
-../Core/Src/motor.c:131:5:get_junction_counter	1
-../Core/Src/motor.c:135:6:handle_junction	9
+../Core/Src/motor.c:125:6:handle_junction	5

@@ -100,6 +100,8 @@ JunctionType j;
 
 
 
+
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 
@@ -191,7 +193,7 @@ void Send_Telemetry() {
 
 
     for (int i = 0; i < sensor_array.number_of_sensors; i++) {
-        snprintf(tmp, sizeof(tmp), "%u", (uint16_t)sensor_array.array[i].adc_raw);
+        snprintf(tmp, sizeof(tmp), "%u", (uint16_t)sensor_array.array[i].mapped_value);
         strcat(ir_part, tmp);
         if (i < sensor_array.number_of_sensors - 1) strcat(ir_part, ",");
     }
@@ -250,8 +252,6 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
 
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*) dma_buffer, NUM_SENSORS + 1);
@@ -284,49 +284,48 @@ int main(void)
 
 
 		b = battery_voltage(dma_buffer);
-		Sync_Sensors(&sensor_array);
+				Sync_Sensors(&sensor_array);
 
-		uint32_t current_time = HAL_GetTick();
-		uint32_t time_diff = current_time - last_time;
+				uint32_t current_time = HAL_GetTick();
+				uint32_t time_diff = current_time - last_time;
 
-		if (time_diff == 0) {
-			continue;
-		}
-		else{
-
-
-		dt = time_diff / 1000.0f;
-		last_time = current_time;}
-
-		processSensors(&sensor_array);
-		binarizeSensors(&sensor_array);
-
-		if ((HAL_GetTick() - last_telem) >= TELEM_INTERVAL_MS) {
-		    last_telem = HAL_GetTick();
-		    Send_Telemetry();
-		}
-
-		if (start == 1) {
+				if (time_diff == 0) {
+					continue;
+				}
+				else{
 
 
+				dt = time_diff / 1000.0f;
+				last_time = current_time;}
+
+				processSensors(&sensor_array);
+				binarizeSensors(&sensor_array);
+
+				if ((HAL_GetTick() - last_telem) >= TELEM_INTERVAL_MS) {
+				    last_telem = HAL_GetTick();
+				    Send_Telemetry();
+				}
+
+				if (start == 1) {
 
 
-		    j = detect_junction_digital(&sensor_array);
+				    j = detect_junction_digital(&sensor_array);
 
-		    if (j != NO_JUNCTION) {
+				    if (j != NO_JUNCTION) {
 
-		        handle_junction(&sensor_array, j, 600);
-		    }
-		    else {
-		    	line = get_line_error_digital(&sensor_array);
+				        handle_junction(&sensor_array, j, 600);
+				    }
+				    else {
+				    	line = get_line_error_digital(&sensor_array);
 
-		        correction = calculate_pid(&pid, line, dt);
-		        follow_line(correction, &sensor_array);
-		    }
-		}
-		else {
-		    set_motor_speed(0, 0, b);
-		}
+				        correction = calculate_pid(&pid, line, dt);
+				        follow_line(correction, &sensor_array);
+				    }
+				}
+				else {
+				    set_motor_speed(0, 0, b);
+				}
+
 
     /* USER CODE END WHILE */
 
@@ -547,16 +546,6 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
-  sConfigOC.OCMode = TIM_OCMODE_PWM2;
-  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
   if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
   {
     Error_Handler();

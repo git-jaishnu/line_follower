@@ -30,7 +30,7 @@ void processSensors(Sensor_Array *sensor_array);
 void binarizeSensors(Sensor_Array *sensor_array);
 
 
-int get_line_error(Sensor_Array *sensor_array);
+float get_line_error(Sensor_Array *sensor_array);
 int get_line_error_digital(Sensor_Array* sensor_array);
 
 int calculate_pid(PID_Controller *pid, int error, float dt);

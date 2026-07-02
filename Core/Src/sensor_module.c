@@ -5,46 +5,43 @@
  *      Author: jaish
  */
 
-
 #include "stm32f4xx_hal.h"
 #include "utils.h"
 #include "motor.h"
 #include "sensor_module.h"
 
-
-
-
-
 volatile uint16_t dma_buffer[NUM_SENSORS + 1];
 
+void Initialize_Sensor_Array(Sensor_Array *sensor_array) {
 
-
-
-void Initialize_Sensor_Array(Sensor_Array *sensor_array){
-
-
-	for(int i = 0 ; i < sensor_array->number_of_sensors ; i++){
+	for (int i = 0; i < sensor_array->number_of_sensors; i++) {
 		sensor_array->array[i].weight = sensor_array->weights[i];
-		sensor_array->array[i].adc_min = 0;
-		sensor_array->array[i].adc_max = 4095;
+		sensor_array->array[i].adc_min = 140;
+		sensor_array->array[i].adc_max = 240;
 		sensor_array->array[i].threshold = SENSOR_THRESHOLD;
 	}
 
-
-
-
 }
 
-void Sync_Sensors(Sensor_Array *sensor_array){
+void Sync_Sensors(Sensor_Array *sensor_array) {
 
-	sensor_array->array[0].adc_raw = dma_buffer[3];
-	sensor_array->array[1].adc_raw = dma_buffer[4];
-	sensor_array->array[2].adc_raw = dma_buffer[2];
-	sensor_array->array[3].adc_raw = dma_buffer[5];
-	sensor_array->array[4].adc_raw = dma_buffer[1];
-	sensor_array->array[5].adc_raw = dma_buffer[6];
-	sensor_array->array[6].adc_raw = dma_buffer[0];
-	sensor_array->array[7].adc_raw = dma_buffer[7];
+	sensor_array->array[0].adc_raw = dma_buffer[7];
+	sensor_array->array[1].adc_raw = dma_buffer[6];
+	sensor_array->array[2].adc_raw = dma_buffer[5];
+	sensor_array->array[3].adc_raw = dma_buffer[4];
+	sensor_array->array[4].adc_raw = dma_buffer[3];
+	sensor_array->array[5].adc_raw = dma_buffer[2];
+	sensor_array->array[6].adc_raw = dma_buffer[1];
+	sensor_array->array[7].adc_raw = dma_buffer[0];
+
+//	sensor_array->array[0].adc_raw = dma_buffer[3];
+//	sensor_array->array[1].adc_raw = dma_buffer[4];
+//	sensor_array->array[2].adc_raw = dma_buffer[2];
+//	sensor_array->array[3].adc_raw = dma_buffer[5];
+//	sensor_array->array[4].adc_raw = dma_buffer[1];
+//	sensor_array->array[5].adc_raw = dma_buffer[6];
+//	sensor_array->array[6].adc_raw = dma_buffer[0];
+//	sensor_array->array[7].adc_raw = dma_buffer[7];
 
 //	sensor_array->array[0].adc_raw = dma_buffer[0];
 //	sensor_array->array[1].adc_raw = dma_buffer[1];
@@ -56,219 +53,208 @@ void Sync_Sensors(Sensor_Array *sensor_array){
 
 }
 
+void autoCalibrate(Sensor_Array *sensor_array, uint32_t duration_ms, int speed) {
 
+	for (int i = 0; i < sensor_array->number_of_sensors; i++) {
+		sensor_array->array[i].adc_min = 0;
+		sensor_array->array[i].adc_max = 4095;
+	}
 
-void autoCalibrate(Sensor_Array *sensor_array , uint32_t duration_ms, int speed) {
+	set_motor_speed(-speed, speed, battery_voltage(dma_buffer));
 
-    for (int i = 0; i < sensor_array->number_of_sensors; i++) {
-    	sensor_array->array[i].adc_min = 0;
-    	sensor_array->array[i].adc_max = 4095;
-    }
+	uint32_t startTime = HAL_GetTick();
 
-    set_motor_speed(-speed, speed , battery_voltage(dma_buffer));
+	while (HAL_GetTick() - startTime < duration_ms) {
 
-    uint32_t startTime = HAL_GetTick();
+		for (int i = 0; i < NUM_SENSORS; i++) {
+			if (sensor_array->array[i].adc_raw < sensor_array->array[i].adc_min)
+				sensor_array->array[i].adc_min = sensor_array->array[i].adc_raw;
+			if (sensor_array->array[i].adc_raw > sensor_array->array[i].adc_max)
+				sensor_array->array[i].adc_max = sensor_array->array[i].adc_raw;
 
+		}
 
-    while (HAL_GetTick() - startTime < duration_ms) {
+		HAL_Delay(1);
+	}
 
-
-        for (int i = 0; i < NUM_SENSORS; i++) {
-        	if (sensor_array->array[i].adc_raw < sensor_array->array[i].adc_min) sensor_array->array[i].adc_min = sensor_array->array[i].adc_raw;
-        	if (sensor_array->array[i].adc_raw > sensor_array->array[i].adc_max) sensor_array->array[i].adc_max = sensor_array->array[i].adc_raw;
-
-        }
-
-
-        HAL_Delay(1);
-    }
-
-
-    set_motor_speed(0, 0 , battery_voltage(dma_buffer));
+	set_motor_speed(0, 0, battery_voltage(dma_buffer));
 }
 
+void processSensors(Sensor_Array *sensor_array) {
+	for (int i = 0; i < sensor_array->number_of_sensors; i++) {
+		int range = sensor_array->array[i].adc_max
+				- sensor_array->array[i].adc_min;
+		if (range <= 0)
+			range = 1;
 
+		int norm = ((int) (sensor_array->array[i].adc_raw
+				- sensor_array->array[i].adc_min) * 1000) / range;
+		norm = constrain_int(norm, 0, 1000);
 
-
-void processSensors(Sensor_Array *sensor_array)
-{
-    for (int i = 0; i < sensor_array->number_of_sensors; i++)
-    {
-        int range = sensor_array->array[i].adc_max - sensor_array->array[i].adc_min;
-        if (range <= 0) range = 1;
-
-        int norm = ((int)(sensor_array->array[i].adc_raw - sensor_array->array[i].adc_min) * 1000) / range;
-        norm = constrain_int(norm, 0, 1000);
-
-
-        sensor_array->array[i].mapped_value = 1000 - norm;
-    }
+		if (sensor_array->array[i].adc_raw > 180) {
+			sensor_array->array[i].mapped_value = norm;
+		} else {
+			sensor_array->array[i].mapped_value = 0;
+		}
+	}
 
 }
 
+void binarizeSensors(Sensor_Array *sensor_array) {
 
-void binarizeSensors(Sensor_Array *sensor_array)
-{
+	for (int i = 0; i < NUM_SENSORS; i++) {
 
-    for (int i = 0; i < NUM_SENSORS; i++)
-    {
-
-        if (sensor_array->array[i].adc_raw > sensor_array->array[i].threshold)
-        {
-            sensor_array->array[i].on = 1;
-        }
-        else
-        {
-        	sensor_array->array[i].on = 0;
-        }
-    }
+		if (sensor_array->array[i].mapped_value > sensor_array->array[i].threshold) {
+			sensor_array->array[i].on = 1;
+		} else {
+			sensor_array->array[i].on = 0;
+		}
+	}
 }
 
+float get_line_error(Sensor_Array *sensor_array) {
+	float adc_sum = 0;
+	float weighted_sum = 0;
+	static float last_error = 0;
 
+	for (int i = 0; i < NUM_SENSORS; i++) {
+		weighted_sum += (float) (sensor_array->array[i].mapped_value)
+				* (sensor_array->array[i].weight);
+		adc_sum += (float)sensor_array->array[i].mapped_value;
+	}
 
+	if (adc_sum == 0)
+		return last_error;
 
-
-int get_line_error(Sensor_Array *sensor_array) {
-	long adc_sum = 0;
-    long weighted_sum = 0;
-    static int last_error = 0;
-
-    for(int i = 0 ; i < NUM_SENSORS ; i++){
-    	weighted_sum += (long)(sensor_array->array[i].mapped_value) * (sensor_array->array[i].weight);
-    	adc_sum += sensor_array->array[i].mapped_value;
-    }
-
-    if (adc_sum == 0) return last_error;
-
-    int out = (int)((weighted_sum * 50) / adc_sum);
-    last_error = out;
-    return out;
+	float out = (float) ((weighted_sum) / adc_sum);
+	last_error = out;
+	return out;
 }
 
-int get_line_error_digital(Sensor_Array* sensor_array) {
-    float weighted_sum = 0;
-    int active_sensors = 0;
-    static int last_error = 0 ;
+int get_line_error_digital(Sensor_Array *sensor_array) {
+	float weighted_sum = 0;
+	int active_sensors = 0;
+	static int last_error = 0;
 
-    for(int i = 0 ; i < NUM_SENSORS ; i++){
-        if (sensor_array->array[i].on == 1) {
-            weighted_sum += sensor_array->array[i].weight;
-            active_sensors++;
-        }
-    }
+	for (int i = 0; i < NUM_SENSORS; i++) {
+		if (sensor_array->array[i].on == 1) {
+			weighted_sum += sensor_array->array[i].weight;
+			active_sensors++;
+		}
+	}
 
-    if(active_sensors == 0) return last_error;
+	if (active_sensors == 0)
+		return last_error;
 
+	float true_position = weighted_sum / active_sensors;
 
+	int out = (int) (true_position);
 
-    float true_position = weighted_sum / active_sensors;
+	last_error = out;
 
-    int out = (int)(true_position);
-
-    last_error = out;
-
-    return out;
+	return out;
 }
-
-
-
-
 
 int calculate_pid(PID_Controller *pid, int error, float dt) {
-    if (dt <= 0.0f) dt = 0.001f; // Default to 1ms if dt is invalid
+	if (dt <= 0.0f)
+		dt = 0.001f; // Default to 1ms if dt is invalid
 
-    float P = pid->Kp * error;
+	float P = pid->Kp * error;
 
-    pid->integral += (error * dt);
-    // Use a separate integral limit or cap its contribution
-    if (pid->integral > pid->limit) pid->integral = pid->limit;
-    if (pid->integral < -pid->limit) pid->integral = -pid->limit;
-    float I = pid->Ki * pid->integral;
+	pid->integral += (error * dt);
+	// Use a separate integral limit or cap its contribution
+	if (pid->integral > pid->limit)
+		pid->integral = pid->limit;
+	if (pid->integral < -pid->limit)
+		pid->integral = -pid->limit;
+	float I = pid->Ki * pid->integral;
 
-    float D = 0;
-    if (dt > 0) {
-        D = pid->Kd * (error - pid->last_error) / dt;
-    }
-    pid->last_error = error;
+	float D = 0;
+	if (dt > 0) {
+		D = pid->Kd * (error - pid->last_error) / dt;
+	}
+	pid->last_error = error;
 
-    float output = P + I + D;
+	float output = P + I + D;
 
-    if (output > pid->limit) return (int)pid->limit;
-    if (output < -pid->limit) return (int)-pid->limit;
+	if (output > pid->limit)
+		return (int) pid->limit;
+	if (output < -pid->limit)
+		return (int) -pid->limit;
 
-    return (int)(output*50);
+	return (int) (output * 50);
 }
-
 
 int count_active_sensors(Sensor_Array *sensor_array) {
-    int active_count = 0;
-    for (int i = 0; i < sensor_array->number_of_sensors; i++) {
-        if (sensor_array->array[i].adc_raw > sensor_array->array[i].threshold) {
-            active_count++;
-        }
-    }
-    return active_count;
+	int active_count = 0;
+	for (int i = 0; i < sensor_array->number_of_sensors; i++) {
+		if (sensor_array->array[i].adc_raw > sensor_array->array[i].threshold) {
+			active_count++;
+		}
+	}
+	return active_count;
 }
-
-
 
 JunctionType detect_junction(Sensor_Array *sensor_array) {
 
-    int n = sensor_array->number_of_sensors;
-    int outer_width = n / 4;
-    if (outer_width < 1) outer_width = 1;
+	int n = sensor_array->number_of_sensors;
+	int outer_width = n / 4;
+	if (outer_width < 1)
+		outer_width = 1;
 
-    int left_outer_count  = 0;
-    int right_outer_count = 0;
-    int center_count      = 0;
-    int total             = 0;
+	int left_outer_count = 0;
+	int right_outer_count = 0;
+	int center_count = 0;
+	int total = 0;
 
-    for (int i = 0; i < n; i++) {
-        total += sensor_array->array[i].on;
+	for (int i = 0; i < n; i++) {
+		total += sensor_array->array[i].on;
 
-        if (i < outer_width) {
-            left_outer_count  += sensor_array->array[i].on;
-        } else if (i >= n - outer_width) {
-            right_outer_count += sensor_array->array[i].on;
-        } else {
-            center_count      += sensor_array->array[i].on;
-        }
-    }
+		if (i < outer_width) {
+			left_outer_count += sensor_array->array[i].on;
+		} else if (i >= n - outer_width) {
+			right_outer_count += sensor_array->array[i].on;
+		} else {
+			center_count += sensor_array->array[i].on;
+		}
+	}
 
+	if (center_count == 0) {
+		return NO_JUNCTION;
+	}
 
-    if (center_count == 0){ return NO_JUNCTION;}
+	int left_branch = (left_outer_count >= 1);
+	int right_branch = (right_outer_count >= 1);
 
-    int left_branch  = (left_outer_count  >= 1);
-    int right_branch = (right_outer_count >= 1);
+	if (left_branch && right_branch)
+		return T_JUNCTION;
+	if (left_branch)
+		return LEFT_JUNCTION;
+	if (right_branch)
+		return RIGHT_JUNCTION;
 
-    if (left_branch && right_branch) return T_JUNCTION;
-    if (left_branch)                 return LEFT_JUNCTION;
-    if (right_branch)                return RIGHT_JUNCTION;
-
-    return NO_JUNCTION;
+	return NO_JUNCTION;
 }
-
-
-
 
 JunctionType detect_junction_digital(Sensor_Array *sensor_array) {
-    int sensor_count = count_active_sensors(sensor_array);
+	int sensor_count = count_active_sensors(sensor_array);
 
-    if (sensor_count >= 5 && sensor_array->array[1].on == 1 && sensor_array->array[6].on == 1  ) {
-        return T_JUNCTION;
-    }
+	if (sensor_count >= 5 && sensor_array->array[1].on == 1
+			&& sensor_array->array[6].on == 1) {
+		return T_JUNCTION;
+	}
 
-    if (sensor_array->array[0].on == 1  && sensor_array->array[7].on == 0 && sensor_array->array[1].on == 1) {
-        return LEFT_JUNCTION;
-    }
+	if (sensor_array->array[0].on == 1 && (sensor_array->array[7].on == 0 && sensor_array->array[6].on == 0 && sensor_array->array[5].on == 0 && sensor_array->array[4].on == 0) && sensor_array->array[1].on == 1) {
+		return LEFT_JUNCTION;
+	}
 
-    if (sensor_array->array[7].on == 1  && sensor_array->array[0].on == 0 && sensor_array->array[6].on == 1)  {
-        return RIGHT_JUNCTION;
-    }
+	if (sensor_array->array[7].on == 1 && (sensor_array->array[0].on  == 0 && sensor_array->array[1].on == 0 && sensor_array->array[2].on == 0 && sensor_array->array[3].on == 0)
+			&& sensor_array->array[6].on == 1) {
+		return RIGHT_JUNCTION;
+	}
 
-    return NO_JUNCTION;
+	return NO_JUNCTION;
 }
-
 
 
 

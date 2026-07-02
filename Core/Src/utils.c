@@ -28,7 +28,8 @@ float constrain_float(float x, float min, float max)
 
 float battery_voltage(volatile uint16_t *dma_buffer){
 	uint16_t adc = dma_buffer[NUM_SENSORS];
-	float voltage = (((float)adc) * 3.3f / 4095.0f) / 0.3125f;
+	float voltage = (((float)adc) * 3.3f / 4095.0f) / 0.2475;
+
 	return voltage;
 
 }

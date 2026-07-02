@@ -13,36 +13,56 @@
 
 void set_motor_speed(int left_motor, int right_motor, float battery_voltage) {
 
+	uint16_t Right_Forward = GPIO_PIN_14;
+	uint16_t Right_Backward = GPIO_PIN_15;
+	uint16_t Left_Backward = GPIO_PIN_12;
+	uint16_t Left_Forward = GPIO_PIN_13;
+
+	// --- Voltage Compensation ---
 	if (battery_voltage < 1.0f) {
-		battery_voltage = 8.4f;
+		battery_voltage = 12.4f;
 	}
 
-	left_motor = (int) ((left_motor * 8.4f) / battery_voltage);
-	right_motor = (int) ((right_motor * 8.4f) / battery_voltage);
+	left_motor = (int) ((left_motor * 12.4f) / battery_voltage);
+	right_motor = (int) ((right_motor * 12.4f) / battery_voltage);
 
 	left_motor = constrain_int(left_motor, -999, 999);
 	right_motor = constrain_int(right_motor, -999, 999);
 
-	if (left_motor < 0 && right_motor > 0) {
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1000);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, right_motor);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 1000 + left_motor);
-	} else if (left_motor < 0 && right_motor < 0) {
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1000 + right_motor);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 1000 + left_motor);
-	} else if (left_motor > 0 && right_motor < 0) {
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1000 + right_motor);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, left_motor);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 1000);
-	} else if (left_motor >= 0 && right_motor >= 0) {
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 1000);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, right_motor);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, left_motor);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 1000);
+	// --- LEFT MOTOR LOGIC ---
+	if (left_motor > 0) {
+		// Forward: IN1 High, IN2 Low
+		HAL_GPIO_WritePin(GPIOB, Left_Forward, 1);
+		HAL_GPIO_WritePin(GPIOB, Left_Backward, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, left_motor);
+	} else if (left_motor < 0) {
+		// Backward: IN1 Low, IN2 High
+		HAL_GPIO_WritePin(GPIOB, Left_Forward, 0);
+		HAL_GPIO_WritePin(GPIOB, Left_Backward, 1);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, (left_motor * -1));
+	} else {
+		// Stop/Coast: IN1 Low, IN2 Low
+		HAL_GPIO_WritePin(GPIOB, Left_Forward, 0);
+		HAL_GPIO_WritePin(GPIOB, Left_Backward, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+	}
+
+	// --- RIGHT MOTOR LOGIC ---
+	if (right_motor > 0) {
+		// Forward: IN1 High, IN2 Low
+		HAL_GPIO_WritePin(GPIOB, Right_Forward, 1);
+		HAL_GPIO_WritePin(GPIOB, Right_Backward, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, right_motor);
+	} else if (right_motor < 0) {
+		// Backward: IN1 Low, IN2 High
+		HAL_GPIO_WritePin(GPIOB, Right_Forward, 0);
+		HAL_GPIO_WritePin(GPIOB, Right_Backward, 1);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (right_motor * -1));
+	} else {
+		// Stop/Coast: IN1 Low, IN2 Low
+		HAL_GPIO_WritePin(GPIOB, Right_Forward, 0);
+		HAL_GPIO_WritePin(GPIOB, Right_Backward, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
 	}
 }
 

@@ -21,6 +21,7 @@ import time
 from collections import deque
 import csv
 from datetime import datetime
+import re
 
 # ── Config ───────────────────────────────────────────────────────────────────
 MAX_POINTS = 400
@@ -76,6 +77,7 @@ class PIDTuner:
         self.paused = False
         self.ir_flip = False
         self.junction = 0
+        self._rebuild_ir_needed = 0   # new sensor count to rebuild, 0 = no rebuild needed
 
         # Recording
         self.recording = False
@@ -692,13 +694,20 @@ class PIDTuner:
             return
 
         now = time.time() - (self.t0 or time.time())
+
+        def _to_float(raw, default=0.0):
+            """Extract leading numeric part from a raw value string."""
+            s = str(vals.get(raw, default)).strip()
+            m = re.match(r'^[-+]?[0-9]*\.?[0-9]+', s)
+            return float(m.group()) if m else float(default)
+
         try:
-            error      = float(vals.get('PE', 0))
-            correction = float(vals.get('PO', 0))
-            left       = int(float(vals.get('PL', 0)))
-            right      = int(float(vals.get('PR', 0)))
-            battery    = float(vals.get('BV', 0))
-            junction   = int(float(vals.get('JC', 0)))
+            error      = _to_float('PE')
+            correction = _to_float('PO')
+            left       = int(_to_float('PL'))
+            right      = int(_to_float('PR'))
+            battery    = _to_float('BV')
+            junction   = int(_to_float('JC'))
         except (ValueError, TypeError) as e:
             print(f"[parse] conversion error: {e} in '{line[:80]}'")
             return
@@ -741,6 +750,10 @@ class PIDTuner:
                 f"[{now:7.2f}s] {line[:120]}"
             )
 
+            # Flag IR rebuild — _tick will handle it on the main thread
+            if need_rebuild:
+                self._rebuild_ir_needed = new_n
+
             # Recording
             if self.recording:
                 self.rec_data.append({
@@ -749,22 +762,7 @@ class PIDTuner:
                     'ir': ir_str, 'junction': junction,
                 })
 
-        # Rebuild IR bars on main thread if sensor count changed
-        if need_rebuild:
-            self.root.after(0, lambda n=new_n: self._rebuild_ir_bars(n))
-            self.root.after(0, lambda n=new_n: self.sensor_lbl.config(
-                text=f"Sensors: {n}", fg=C['green']))
-
-        # ── Update live display safely from the main thread ──────────────────
-        def _update_ui():
-            self.sv['err'].set(f"{error:.1f}")
-            self.sv['corr'].set(f"{correction:.1f}")
-            self.sv['left'].set(str(left))
-            self.sv['right'].set(str(right))
-            self.sv['batt'].set(f"{battery:.1f} V")
-        self.root.after(0, _update_ui)
-
-        # Packet rate
+        # Packet rate (lock-free, reader-thread only)
         self._pkt_count += 1
         elapsed = time.time() - self._pkt_time
         if elapsed >= 1.0:
@@ -1001,6 +999,16 @@ class PIDTuner:
     #  PERIODIC UPDATE
     # ═════════════════════════════════════════════════════════════════════════
     def _tick(self):
+        # ── Handle pending IR bar rebuild (set by reader thread) ─────────────
+        rebuild_n = 0
+        with self.lock:
+            if self._rebuild_ir_needed:
+                rebuild_n = self._rebuild_ir_needed
+                self._rebuild_ir_needed = 0
+        if rebuild_n:
+            self._rebuild_ir_bars(rebuild_n)
+            self.sensor_lbl.config(text=f"Sensors: {rebuild_n}", fg=C['green'])
+
         with self.lock:
             has_data = self.new_data
             if has_data and not self.paused:
@@ -1013,6 +1021,15 @@ class PIDTuner:
                 # Apply flip here so it's in one place
                 ir = list(reversed(self.ir_snapshot)) if self.ir_flip else list(self.ir_snapshot)
                 self.new_data = False
+            # Read latest for live-value labels (always, even when paused)
+            latest = dict(self._latest)
+
+        # ── Update live-value sidebar labels ─────────────────────────────────
+        self.sv['err'].set(f"{latest['error']:.1f}")
+        self.sv['corr'].set(f"{latest['correction']:.1f}")
+        self.sv['left'].set(str(latest['left']))
+        self.sv['right'].set(str(latest['right']))
+        self.sv['batt'].set(f"{latest['battery']:.1f} V")
 
         if has_data and not self.paused:
             # ── Error + Correction (dual axis) ───────────────────────────────
@@ -1029,8 +1046,8 @@ class PIDTuner:
                 c_lo, c_hi = min(min(co), 0), max(max(co), 0)
                 pad = max((c_hi - c_lo) * 0.1, 50)  # 10% padding, min ±50
                 self.ax1_r.set_ylim(c_lo - pad, c_hi + pad)
-            # Shared X-axis for both time-series charts
-            if t:
+            # Shared X-axis — only set when there are at least 2 distinct points
+            if len(t) >= 2 and t[-1] != t[0]:
                 self.ax1.set_xlim(t[0], t[-1])
                 self.ax2.set_xlim(t[0], t[-1])
 

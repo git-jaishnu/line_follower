@@ -1,5 +1,16 @@
-../Core/Src/motor.c:15:6:set_motor_speed	24	static
-../Core/Src/motor.c:55:6:follow_line	24	static
-../Core/Src/motor.c:67:6:swing_turn_left	24	static
-../Core/Src/motor.c:96:6:swing_turn_right	24	static
-../Core/Src/motor.c:125:6:handle_junction	24	static
+<<<<<<< Updated upstream
+../Core/Src/motor.c:14:6:set_motor_speed	32	static
+../Core/Src/motor.c:69:6:follow_line	24	static
+../Core/Src/motor.c:77:6:swing_turn_left	24	static
+../Core/Src/motor.c:103:6:swing_turn_right	24	static
+../Core/Src/motor.c:129:6:shoot_through	16	static
+../Core/Src/motor.c:148:6:handle_junction	24	static
+=======
+../Core/Src/motor.c:49:9:nonBlockingDelay	16	static
+../Core/Src/motor.c:66:6:set_motor_speed	32	static
+../Core/Src/motor.c:121:6:follow_line	24	static
+../Core/Src/motor.c:129:6:swing_turn_left	24	static
+../Core/Src/motor.c:152:6:swing_turn_right	24	static
+../Core/Src/motor.c:175:6:shoot_through	16	static
+../Core/Src/motor.c:194:6:handle_junction	24	static
+>>>>>>> Stashed changes

@@ -1,0 +1,2 @@
+../Core/Src/motor.c:6:6:set_motor_speed	6
+../Core/Src/motor.c:48:6:follow_line	1

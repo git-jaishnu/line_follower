@@ -1,0 +1,2 @@
+../Core/Src/bluetooth.c:19:6:bt_send	16	static
+../Core/Src/bluetooth.c:23:6:processBluetoothCommand	64	static

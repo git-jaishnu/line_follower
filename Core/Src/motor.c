@@ -86,8 +86,9 @@ void swing_turn_left(Sensor_Array *sa, int speed) {
 		Sync_Sensors(sa);
 		processSensors(sa);
 		binarizeSensors(sa);
+		int count = count_active_sensors(sa) ;
 
-		if (sa->array[3].on == 1 || sa->array[4].on == 1) {
+		if ((sa->array[3].on == 1 || sa->array[4].on == 1) && (count <= 2)) {
 			break;
 		}
 
@@ -112,8 +113,9 @@ void swing_turn_right(Sensor_Array *sa, int speed) {
 		Sync_Sensors(sa);
 		processSensors(sa);
 		binarizeSensors(sa);
+		int count = count_active_sensors(sa) ;
 
-		if (sa->array[2].on == 1 || sa->array[3].on == 1) {
+		if ((sa->array[2].on == 1 || sa->array[3].on == 1) && (count <= 2)) {
 			break;
 		}
 
@@ -128,14 +130,16 @@ void swing_turn_right(Sensor_Array *sa, int speed) {
 
 void shoot_through(Sensor_Array *sa, int speed) {
 	set_motor_speed(speed, speed, battery_voltage(dma_buffer));
+	HAL_Delay(100);
 
 
 	while (1) {
 		Sync_Sensors(sa);
 		processSensors(sa);
 		binarizeSensors(sa);
+		int count = count_active_sensors(sa) ;
 
-		if ((sa->array[2].on == 1 || sa->array[3].on == 1) && (sa->array[0].on == 0 || sa->array[7].on == 0) ) {
+		if ((sa->array[2].on == 1 || sa->array[3].on == 1) && (count <= 2) ) {
 			break;
 		}
 
@@ -143,6 +147,8 @@ void shoot_through(Sensor_Array *sa, int speed) {
 	}
 
 	HAL_Delay(20);
+
+	set_motor_speed(0, 0, battery_voltage(dma_buffer));
 }
 
 void handle_junction(Sensor_Array *sa, JunctionType j, int speed) {

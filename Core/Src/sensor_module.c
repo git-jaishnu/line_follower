@@ -16,8 +16,8 @@ void Initialize_Sensor_Array(Sensor_Array *sensor_array) {
 
 	for (int i = 0; i < sensor_array->number_of_sensors; i++) {
 		sensor_array->array[i].weight = sensor_array->weights[i];
-		sensor_array->array[i].adc_min = 140;
-		sensor_array->array[i].adc_max = 240;
+		sensor_array->array[i].adc_min = 150;
+		sensor_array->array[i].adc_max = 250;
 		sensor_array->array[i].threshold = SENSOR_THRESHOLD;
 	}
 
@@ -182,13 +182,13 @@ int calculate_pid(PID_Controller *pid, int error, float dt) {
 	if (output < -pid->limit)
 		return (int) -pid->limit;
 
-	return (int) (output * 20);
+	return (int) (output * 50);
 }
 
 int count_active_sensors(Sensor_Array *sensor_array) {
 	int active_count = 0;
 	for (int i = 0; i < sensor_array->number_of_sensors; i++) {
-		if (sensor_array->array[i].adc_raw > sensor_array->array[i].threshold) {
+		if (sensor_array->array[i].mapped_value > sensor_array->array[i].threshold) {
 			active_count++;
 		}
 	}

@@ -77,10 +77,10 @@ void follow_line(int correction, Sensor_Array *sensor_array) {
 void swing_turn_left(Sensor_Array *sa, int speed) {
 
 	set_motor_speed(speed, speed, battery_voltage(dma_buffer));
-	HAL_Delay(100);
+
 
 	set_motor_speed(-speed, speed, battery_voltage(dma_buffer));
-	HAL_Delay(100);
+
 
 	while (1) {
 		Sync_Sensors(sa);
@@ -104,10 +104,10 @@ void swing_turn_left(Sensor_Array *sa, int speed) {
 void swing_turn_right(Sensor_Array *sa, int speed) {
 	set_motor_speed(speed, speed, battery_voltage(dma_buffer));
 
-	HAL_Delay(100);
+
 	set_motor_speed(speed, -speed, battery_voltage(dma_buffer));
 
-	HAL_Delay(100);
+
 
 	while (1) {
 		Sync_Sensors(sa);
@@ -115,7 +115,7 @@ void swing_turn_right(Sensor_Array *sa, int speed) {
 		binarizeSensors(sa);
 		int count = count_active_sensors(sa) ;
 
-		if ((sa->array[2].on == 1 || sa->array[3].on == 1) && (count <= 2)) {
+		if ((sa->array[2].on == 1 || sa->array[3].on == 1)) {
 			break;
 		}
 
@@ -139,7 +139,7 @@ void shoot_through(Sensor_Array *sa, int speed) {
 		binarizeSensors(sa);
 		int count = count_active_sensors(sa) ;
 
-		if ((sa->array[2].on == 1 || sa->array[3].on == 1) && (count <= 2) ) {
+		if ((sa->array[2].on == 1 || sa->array[3].on == 1) ) {
 			break;
 		}
 

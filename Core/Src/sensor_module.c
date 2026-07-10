@@ -182,7 +182,7 @@ int calculate_pid(PID_Controller *pid, int error, float dt) {
 	if (output < -pid->limit)
 		return (int) -pid->limit;
 
-	return (int) (output * 50);
+	return (int) (output * 20);
 }
 
 int count_active_sensors(Sensor_Array *sensor_array) {
@@ -239,18 +239,19 @@ JunctionType detect_junction(Sensor_Array *sensor_array) {
 JunctionType detect_junction_digital(Sensor_Array *sensor_array) {
 	int sensor_count = count_active_sensors(sensor_array);
 
-	if (sensor_count >= 5 && sensor_array->array[1].on == 1
-			&& sensor_array->array[6].on == 1) {
-		return T_JUNCTION;
-	}
 
-	if (sensor_array->array[0].on == 1 && (sensor_array->array[7].on == 0 && sensor_array->array[6].on == 0 && sensor_array->array[5].on == 0 && sensor_array->array[4].on == 0) && sensor_array->array[1].on == 1) {
+
+	if (sensor_array->array[0].on == 1 && sensor_array->array[1].on == 1 && sensor_array->array[6].on == 0) {
 		return LEFT_JUNCTION;
 	}
 
-	if (sensor_array->array[7].on == 1 && (sensor_array->array[0].on  == 0 && sensor_array->array[1].on == 0 && sensor_array->array[2].on == 0 && sensor_array->array[3].on == 0)
-			&& sensor_array->array[6].on == 1) {
+	if (sensor_array->array[7].on == 1 && sensor_array->array[6].on == 1 && sensor_array->array[1].on == 0) {
 		return RIGHT_JUNCTION;
+	}
+
+	if (sensor_count >= 5 && sensor_array->array[1].on == 1
+				&& sensor_array->array[6].on == 1) {
+			return T_JUNCTION;
 	}
 
 	return NO_JUNCTION;

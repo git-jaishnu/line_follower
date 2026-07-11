@@ -11,6 +11,23 @@
 #include "sensor_module.h"
 #include "motor.h"
 
+uint8_t nonBlockingDelay(uint32_t ms) {
+	static uint32_t startTime = 0;
+	static uint8_t active = 0;
+
+	if (!active) {
+		startTime = HAL_GetTick();
+		active = 1;
+	}
+
+	if ((HAL_GetTick() - startTime) >= ms) {
+		active = 0;
+		return 0;
+	}
+
+	return 1;
+}
+
 void set_motor_speed(int left_motor, int right_motor, float battery_voltage) {
 
 	uint16_t Right_Forward = GPIO_PIN_14;
@@ -76,19 +93,21 @@ void follow_line(int correction, Sensor_Array *sensor_array) {
 
 void swing_turn_left(Sensor_Array *sa, int speed) {
 
-	set_motor_speed(speed, speed, battery_voltage(dma_buffer));
+	while (nonBlockingDelay(100)) {
+		set_motor_speed(speed, speed, battery_voltage(dma_buffer));
+	}
 
-
-	set_motor_speed(-speed, speed, battery_voltage(dma_buffer));
-
+	while (nonBlockingDelay(100)) {
+		set_motor_speed(-speed, speed, battery_voltage(dma_buffer));
+	}
 
 	while (1) {
 		Sync_Sensors(sa);
 		processSensors(sa);
 		binarizeSensors(sa);
-		int count = count_active_sensors(sa) ;
 
-		if ((sa->array[3].on == 1 || sa->array[4].on == 1) && (count <= 2)) {
+
+		if ((sa->array[3].on == 1 || sa->array[4].on == 1)) {
 			break;
 		}
 
@@ -102,18 +121,19 @@ void swing_turn_left(Sensor_Array *sa, int speed) {
 }
 
 void swing_turn_right(Sensor_Array *sa, int speed) {
-	set_motor_speed(speed, speed, battery_voltage(dma_buffer));
+	while (nonBlockingDelay(100)) {
+		set_motor_speed(speed, speed, battery_voltage(dma_buffer));
+	}
 
-
-	set_motor_speed(speed, -speed, battery_voltage(dma_buffer));
-
-
+	while (nonBlockingDelay(100)) {
+		set_motor_speed(speed, -speed, battery_voltage(dma_buffer));
+	}
 
 	while (1) {
 		Sync_Sensors(sa);
 		processSensors(sa);
 		binarizeSensors(sa);
-		int count = count_active_sensors(sa) ;
+		int count = count_active_sensors(sa);
 
 		if ((sa->array[2].on == 1 || sa->array[3].on == 1)) {
 			break;
@@ -132,21 +152,20 @@ void shoot_through(Sensor_Array *sa, int speed) {
 	set_motor_speed(speed, speed, battery_voltage(dma_buffer));
 	HAL_Delay(100);
 
-
-	while (1) {
-		Sync_Sensors(sa);
-		processSensors(sa);
-		binarizeSensors(sa);
-		int count = count_active_sensors(sa) ;
-
-		if ((sa->array[2].on == 1 || sa->array[3].on == 1) ) {
-			break;
-		}
-
-		HAL_Delay(5);
-	}
-
-	HAL_Delay(20);
+//	while (1) {
+//		Sync_Sensors(sa);
+//		processSensors(sa);
+//		binarizeSensors(sa);
+//
+//
+//		if ((sa->array[2].on == 1 || sa->array[3].on == 1)) {
+//			break;
+//		}
+//
+//		HAL_Delay(5);
+//	}
+//
+//	HAL_Delay(20);
 
 	set_motor_speed(0, 0, battery_voltage(dma_buffer));
 }

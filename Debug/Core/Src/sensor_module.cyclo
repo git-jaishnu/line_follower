@@ -8,4 +8,4 @@
 ../Core/Src/sensor_module.c:158:5:calculate_pid	7
 ../Core/Src/sensor_module.c:188:5:count_active_sensors	3
 ../Core/Src/sensor_module.c:198:14:detect_junction	11
-../Core/Src/sensor_module.c:239:14:detect_junction_digital	16
+../Core/Src/sensor_module.c:239:14:detect_junction_digital	10

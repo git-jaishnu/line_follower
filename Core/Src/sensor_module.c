@@ -240,7 +240,6 @@ JunctionType detect_junction_digital(Sensor_Array *sensor_array) {
 	int sensor_count = count_active_sensors(sensor_array);
 
 
-
 	if (sensor_array->array[0].on == 1 && sensor_array->array[1].on == 1 && sensor_array->array[6].on == 0) {
 		return LEFT_JUNCTION;
 	}

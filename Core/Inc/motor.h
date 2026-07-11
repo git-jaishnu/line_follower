@@ -21,6 +21,6 @@ void swing_turn_right(Sensor_Array *sa, int speed);
 void swing_turn_left(Sensor_Array *sa, int speed);
 
 void handle_junction(Sensor_Array *sa, JunctionType j , int speed);
-
+uint8_t nonBlockingDelay(uint32_t ms);
 
 #endif /* INC_MOTOR_H_ */

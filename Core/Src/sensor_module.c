@@ -59,17 +59,6 @@ float get_line_error(Sensor_Array *sensor_array) {
 	last_error = out;
 	return out;
 }
-
-void jugaad(Sensor_Array *sa, int speed) {
-	if ((sa->array[1].on == 1 && sa->array[6].on == 1)&&(sa->array[2].on == 1 && sa->array[5].on == 1)) {
-		set_motor_speed(700, -700, battery_voltage(dma_buffer));
-		HAL_Delay(100);
-	}
-	Sync_Sensors(sa);
-	processSensors(sa);
-	binarizeSensors(sa);
-}
-
 int calculate_pid(PID_Controller *pid, float error, float dt) {
 	if (dt <= 0.0f)
 		dt = 0.001f;

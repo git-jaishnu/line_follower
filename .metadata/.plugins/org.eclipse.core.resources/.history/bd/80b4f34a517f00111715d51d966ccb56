@@ -1,0 +1,148 @@
+#include "main.h"
+#include "stm32f4xx_hal.h"
+#include  "utils.h"
+#include "sensor_module.h"
+#include "motor.h"
+void set_motor_speed(int left_motor, int right_motor, float battery_voltage) {
+	uint16_t Right_Forward = GPIO_PIN_14;
+	uint16_t Right_Backward = GPIO_PIN_15;
+	uint16_t Left_Backward = GPIO_PIN_12;
+	uint16_t Left_Forward = GPIO_PIN_13;
+	if (battery_voltage < 1.0f) {
+		battery_voltage = 12.4f;
+	}
+	left_motor = (int) ((left_motor * 12.4f) / battery_voltage);
+	right_motor = (int) ((right_motor * 12.4f) / battery_voltage);
+
+	left_motor = constrain_int(left_motor, -999, 999);
+	right_motor = constrain_int(right_motor, -999, 999);
+	if (left_motor > 0) {
+		HAL_GPIO_WritePin(GPIOB, Left_Forward, 1);
+		HAL_GPIO_WritePin(GPIOB, Left_Backward, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, left_motor);
+	} else if (left_motor < 0) {
+		HAL_GPIO_WritePin(GPIOB, Left_Forward, 0);
+		HAL_GPIO_WritePin(GPIOB, Left_Backward, 1);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, (left_motor * -1));
+	} else {
+		HAL_GPIO_WritePin(GPIOB, Left_Forward, 0);
+		HAL_GPIO_WritePin(GPIOB, Left_Backward, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+	}
+
+	if (right_motor > 0) {
+		HAL_GPIO_WritePin(GPIOB, Right_Forward, 1);
+		HAL_GPIO_WritePin(GPIOB, Right_Backward, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, right_motor);
+	} else if (right_motor < 0) {
+		HAL_GPIO_WritePin(GPIOB, Right_Forward, 0);
+		HAL_GPIO_WritePin(GPIOB, Right_Backward, 1);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (right_motor * -1));
+	} else {
+		HAL_GPIO_WritePin(GPIOB, Right_Forward, 0);
+		HAL_GPIO_WritePin(GPIOB, Right_Backward, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
+	}
+}
+
+void follow_line(int correction, int base_speed) {
+	int left_speed = base_speed + correction;
+	int right_speed = base_speed - correction;
+	set_motor_speed(left_speed, right_speed, battery_voltage(dma_buffer));
+}
+
+// How long a point-turn is allowed to search for realignment before giving
+// up and handing control back to the normal PID loop regardless. This is a
+// hard safety net: even with the Sync_Sensors fix below, a competition run
+// cannot afford ANY code path that can hang forever - a sensor glitch, a
+// junction geometry you didn't expect, dust/glare on sensor 3/4 - anything
+// that stops the break condition from ever being true must still let go
+// after a bounded time rather than spin until the battery dies.
+#define JUGAAD_REALIGN_TIMEOUT_MS 400
+
+// Direction preference for genuine T/cross junctions (both sides show line
+// at once, so there's no "one side is empty" signal to pick a direction
+// from - see jugaad() below). Change this at the start of a run depending
+// on your track's convention, or wire it to a bluetooth command the same
+// way base_speed/PID already are.
+volatile TurnPriority turn_priority = TURN_PRIORITY_RIGHT;
+
+// Brief symmetric reverse pulse right before committing to a point-turn.
+// A point-turn command doesn't cancel existing forward momentum instantly -
+// at high base_speed the chassis keeps carrying forward while it starts
+// rotating, so the "point" turn actually arcs forward and can miss the
+// realignment sensors or overshoot the junction entirely. This kills
+// translational speed first so the pivot is centered on roughly the point
+// where it triggered, regardless of how fast you were going into it.
+// BRAKE_SPEED/BRAKE_MS both need tuning on your actual bot/track - too much
+// and you'll rock backward before spinning, too little and it won't matter
+// at your top speed. Start small (or 0/0 to disable) and increase until
+// point-turns hit the same target radius at high and low base_speed.
+#define BRAKE_SPEED 400
+#define BRAKE_MS    15
+
+static void kill_momentum(void) {
+	if (BRAKE_MS > 0) {
+		set_motor_speed(-BRAKE_SPEED, -BRAKE_SPEED, battery_voltage(dma_buffer));
+		HAL_Delay(BRAKE_MS);
+	}
+}
+
+// Spins in place (dir>0 = right/clockwise, dir<0 = left/counter-clockwise)
+// until sensor 3 or 4 re-detects the line, or JUGAAD_REALIGN_TIMEOUT_MS
+// elapses, whichever comes first. Shared by turn_jugaad and jugaad so the
+// Sync_Sensors fix and the timeout only need to exist in one place.
+static void point_turn_until_aligned(Sensor_Array *sa, int dir, int speed) {
+	kill_momentum();
+	set_motor_speed(dir * speed, -dir * speed, battery_voltage(dma_buffer));
+
+	uint32_t start_tick = HAL_GetTick();
+	while ((HAL_GetTick() - start_tick) < JUGAAD_REALIGN_TIMEOUT_MS) {
+		// THE FIX: without this call, adc_raw never changes while spinning,
+		// so processSensors/binarizeSensors keep recomputing .on from the
+		// exact same stale snapshot every iteration - the break condition
+		// below could never go true, which is why it spun forever.
+		Sync_Sensors(sa);
+		processSensors(sa);
+		binarizeSensors(sa);
+		if (sa->array[3].on == 1 || sa->array[4].on == 1) {
+			break;
+		}
+		HAL_Delay(5);
+	}
+	set_motor_speed(0, 0, battery_voltage(dma_buffer));
+	HAL_Delay(5);
+}
+
+void turn_jugaad(Sensor_Array *sa, int correction, int base_speed) {
+	// One side overwhelmingly on, the other completely off - a >90 deg
+	// turn where the line has swept fully to one flank. dir=+1 pivots
+	// right (matches your original (700,-700) mapping), dir=-1 pivots left.
+	if (((sa->array[3].on + sa->array[4].on + sa->array[5].on + sa->array[6].on + sa->array[7].on) >= 3)
+			&& ((sa->array[0].on + sa->array[1].on + sa->array[2].on) == 0)) {
+		point_turn_until_aligned(sa, 1, 700);
+	}
+	else if (((sa->array[0].on + sa->array[1].on + sa->array[2].on + sa->array[3].on + sa->array[4].on) >= 3)
+			&& ((sa->array[5].on + sa->array[6].on + sa->array[7].on) == 0)) {
+		point_turn_until_aligned(sa, -1, 700);
+	}
+	Sync_Sensors(sa);
+	processSensors(sa);
+	binarizeSensors(sa);
+}
+
+void jugaad(Sensor_Array *sa, int speed) {
+	// Both flanks show line mass at once - unlike turn_jugaad's pattern,
+	// neither side is empty, so there's no signal telling you which way
+	// the correct branch is. This is a genuine T/cross junction: fall back
+	// to whichever direction turn_priority says, same realignment-based
+	// point turn as turn_jugaad rather than the old fixed 100ms blind pulse.
+	if ((sa->array[1].on == 1 && sa->array[6].on == 1)
+			&& (sa->array[2].on == 1 && sa->array[5].on == 1)) {
+		int dir = (turn_priority == TURN_PRIORITY_RIGHT) ? 1 : -1;
+		point_turn_until_aligned(sa, dir, speed);
+	}
+	Sync_Sensors(sa);
+	processSensors(sa);
+	binarizeSensors(sa);
+}

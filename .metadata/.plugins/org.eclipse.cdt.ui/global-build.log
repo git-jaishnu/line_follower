@@ -4398,3 +4398,239 @@ Finished building: default.size.stdout
  
 Finished building: line_follower.list
  
+12:16:59 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+arm-none-eabi-gcc "../Core/Src/motor.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/motor.d" -MT"Core/Src/motor.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/motor.o"
+arm-none-eabi-gcc -o "line_follower.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\7_wick\flf_workspace\line_follower\STM32F411CEUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="line_follower.map" -Wl,--gc-sections -static -u _scanf_float -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: line_follower.elf
+ 
+arm-none-eabi-size  line_follower.elf 
+arm-none-eabi-objdump -h -S line_follower.elf  > "line_follower.list"
+   text	   data	    bss	    dec	    hex	filename
+  47372	    508	   2492	  50372	   c4c4	line_follower.elf
+Finished building: default.size.stdout
+ 
+Finished building: line_follower.list
+ 
+12:17:27 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-size  line_follower.elf 
+   text	   data	    bss	    dec	    hex	filename
+  47372	    508	   2492	  50372	   c4c4	line_follower.elf
+Finished building: default.size.stdout
+ 
+12:17:46 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-size  line_follower.elf 
+   text	   data	    bss	    dec	    hex	filename
+  47372	    508	   2492	  50372	   c4c4	line_follower.elf
+Finished building: default.size.stdout
+ 
+12:18:17 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-size  line_follower.elf 
+   text	   data	    bss	    dec	    hex	filename
+  47372	    508	   2492	  50372	   c4c4	line_follower.elf
+Finished building: default.size.stdout
+ 
+12:33:33 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+arm-none-eabi-gcc "../Core/Src/motor.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/motor.d" -MT"Core/Src/motor.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/motor.o"
+arm-none-eabi-gcc "../Core/Src/sensor_module.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/sensor_module.d" -MT"Core/Src/sensor_module.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/sensor_module.o"
+arm-none-eabi-gcc "../Core/Src/utils.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/utils.d" -MT"Core/Src/utils.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/utils.o"
+arm-none-eabi-gcc -o "line_follower.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\7_wick\flf_workspace\line_follower\STM32F411CEUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="line_follower.map" -Wl,--gc-sections -static -u _scanf_float -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: line_follower.elf
+ 
+arm-none-eabi-size  line_follower.elf 
+arm-none-eabi-objdump -h -S line_follower.elf  > "line_follower.list"
+   text	   data	    bss	    dec	    hex	filename
+  47380	    512	   2496	  50388	   c4d4	line_follower.elf
+Finished building: default.size.stdout
+ 
+Finished building: line_follower.list
+ 
+12:33:53 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-size  line_follower.elf 
+   text	   data	    bss	    dec	    hex	filename
+  47380	    512	   2496	  50388	   c4d4	line_follower.elf
+Finished building: default.size.stdout
+ 
+12:39:42 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+arm-none-eabi-gcc -o "line_follower.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\7_wick\flf_workspace\line_follower\STM32F411CEUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="line_follower.map" -Wl,--gc-sections -static -u _scanf_float -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: line_follower.elf
+ 
+arm-none-eabi-size  line_follower.elf 
+arm-none-eabi-objdump -h -S line_follower.elf  > "line_follower.list"
+   text	   data	    bss	    dec	    hex	filename
+  47436	    512	   2496	  50444	   c50c	line_follower.elf
+Finished building: default.size.stdout
+ 
+Finished building: line_follower.list
+ 
+12:40:17 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-size  line_follower.elf 
+   text	   data	    bss	    dec	    hex	filename
+  47436	    512	   2496	  50444	   c50c	line_follower.elf
+Finished building: default.size.stdout
+ 
+12:40:33 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-size  line_follower.elf 
+   text	   data	    bss	    dec	    hex	filename
+  47436	    512	   2496	  50444	   c50c	line_follower.elf
+Finished building: default.size.stdout
+ 
+12:47:05 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+arm-none-eabi-gcc "../Core/Src/motor.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/motor.d" -MT"Core/Src/motor.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/motor.o"
+arm-none-eabi-gcc -o "line_follower.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\7_wick\flf_workspace\line_follower\STM32F411CEUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="line_follower.map" -Wl,--gc-sections -static -u _scanf_float -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: line_follower.elf
+ 
+arm-none-eabi-size  line_follower.elf 
+arm-none-eabi-objdump -h -S line_follower.elf  > "line_follower.list"
+   text	   data	    bss	    dec	    hex	filename
+  47428	    512	   2496	  50436	   c504	line_follower.elf
+Finished building: default.size.stdout
+ 
+Finished building: line_follower.list
+ 
+12:50:08 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+arm-none-eabi-gcc "../Core/Src/motor.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/motor.d" -MT"Core/Src/motor.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/motor.o"
+arm-none-eabi-gcc -o "line_follower.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\7_wick\flf_workspace\line_follower\STM32F411CEUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="line_follower.map" -Wl,--gc-sections -static -u _scanf_float -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: line_follower.elf
+ 
+arm-none-eabi-size  line_follower.elf 
+arm-none-eabi-objdump -h -S line_follower.elf  > "line_follower.list"
+   text	   data	    bss	    dec	    hex	filename
+  47444	    512	   2496	  50452	   c514	line_follower.elf
+Finished building: default.size.stdout
+ 
+Finished building: line_follower.list
+ 
+12:50:45 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+arm-none-eabi-gcc -o "line_follower.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\7_wick\flf_workspace\line_follower\STM32F411CEUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="line_follower.map" -Wl,--gc-sections -static -u _scanf_float -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: line_follower.elf
+ 
+arm-none-eabi-size  line_follower.elf 
+arm-none-eabi-objdump -h -S line_follower.elf  > "line_follower.list"
+   text	   data	    bss	    dec	    hex	filename
+  47444	    512	   2496	  50452	   c514	line_follower.elf
+Finished building: default.size.stdout
+ 
+Finished building: line_follower.list
+ 
+12:55:06 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+arm-none-eabi-gcc "../Core/Src/motor.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/motor.d" -MT"Core/Src/motor.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/motor.o"
+arm-none-eabi-gcc -o "line_follower.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\7_wick\flf_workspace\line_follower\STM32F411CEUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="line_follower.map" -Wl,--gc-sections -static -u _scanf_float -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: line_follower.elf
+ 
+arm-none-eabi-size  line_follower.elf 
+arm-none-eabi-objdump -h -S line_follower.elf  > "line_follower.list"
+   text	   data	    bss	    dec	    hex	filename
+  47460	    512	   2496	  50468	   c524	line_follower.elf
+Finished building: default.size.stdout
+ 
+Finished building: line_follower.list
+ 
+13:00:39 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c: In function 'main':
+../Core/Src/main.c:229:13: warning: unused variable 'cornering_speed' [-Wunused-variable]
+  229 |         int cornering_speed;
+      |             ^~~~~~~~~~~~~~~
+arm-none-eabi-gcc -o "line_follower.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\7_wick\flf_workspace\line_follower\STM32F411CEUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="line_follower.map" -Wl,--gc-sections -static -u _scanf_float -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: line_follower.elf
+ 
+arm-none-eabi-size  line_follower.elf 
+arm-none-eabi-objdump -h -S line_follower.elf  > "line_follower.list"
+   text	   data	    bss	    dec	    hex	filename
+  47412	    512	   2496	  50420	   c4f4	line_follower.elf
+Finished building: default.size.stdout
+ 
+Finished building: line_follower.list
+ 
+13:19:24 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+arm-none-eabi-gcc "../Core/Src/motor.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/motor.d" -MT"Core/Src/motor.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/motor.o"
+../Core/Src/main.c: In function 'main':
+../Core/Src/main.c:277:54: error: 'sa' undeclared (first use in this function)
+  277 |                                         Sync_Sensors(sa);
+      |                                                      ^~
+../Core/Src/main.c:277:54: note: each undeclared identifier is reported only once for each function it appears in
+../Core/Src/main.c:229:13: warning: unused variable 'cornering_speed' [-Wunused-variable]
+  229 |         int cornering_speed;
+      |             ^~~~~~~~~~~~~~~
+make: *** [Core/Src/subdir.mk:46: Core/Src/main.o] Error 1
+make: *** Waiting for unfinished jobs....
+"make -j12 all" terminated with exit code 2. Build might be incomplete.
+13:20:11 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+arm-none-eabi-gcc -o "line_follower.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\7_wick\flf_workspace\line_follower\STM32F411CEUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="line_follower.map" -Wl,--gc-sections -static -u _scanf_float -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: line_follower.elf
+ 
+arm-none-eabi-size  line_follower.elf 
+arm-none-eabi-objdump -h -S line_follower.elf  > "line_follower.list"
+   text	   data	    bss	    dec	    hex	filename
+  47428	    512	   2496	  50436	   c504	line_follower.elf
+Finished building: default.size.stdout
+ 
+Finished building: line_follower.list
+ 
+13:25:09 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+arm-none-eabi-gcc -o "line_follower.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\7_wick\flf_workspace\line_follower\STM32F411CEUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="line_follower.map" -Wl,--gc-sections -static -u _scanf_float -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: line_follower.elf
+ 
+arm-none-eabi-size  line_follower.elf 
+arm-none-eabi-objdump -h -S line_follower.elf  > "line_follower.list"
+   text	   data	    bss	    dec	    hex	filename
+  47428	    512	   2496	  50436	   c504	line_follower.elf
+Finished building: default.size.stdout
+ 
+Finished building: line_follower.list
+ 
+13:36:16 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-gcc "../Core/Src/motor.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/motor.d" -MT"Core/Src/motor.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/motor.o"
+arm-none-eabi-gcc -o "line_follower.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\7_wick\flf_workspace\line_follower\STM32F411CEUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="line_follower.map" -Wl,--gc-sections -static -u _scanf_float -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: line_follower.elf
+ 
+arm-none-eabi-size  line_follower.elf 
+arm-none-eabi-objdump -h -S line_follower.elf  > "line_follower.list"
+   text	   data	    bss	    dec	    hex	filename
+  47428	    508	   2500	  50436	   c504	line_follower.elf
+Finished building: default.size.stdout
+ 
+Finished building: line_follower.list
+ 
+14:22:58 **** Incremental Build of configuration Debug for project line_follower ****
+make -j12 all 
+arm-none-eabi-gcc "../Core/Src/motor.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32F411xE -c -I../Core/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc -I../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32F4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/motor.d" -MT"Core/Src/motor.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/motor.o"
+arm-none-eabi-gcc -o "line_follower.elf" @"objects.list"   -mcpu=cortex-m4 -T"C:\Users\7_wick\flf_workspace\line_follower\STM32F411CEUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="line_follower.map" -Wl,--gc-sections -static -u _scanf_float -u _printf_float --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: line_follower.elf
+ 
+arm-none-eabi-size  line_follower.elf 
+arm-none-eabi-objdump -h -S line_follower.elf  > "line_follower.list"
+   text	   data	    bss	    dec	    hex	filename
+  47452	    508	   2500	  50460	   c51c	line_follower.elf
+Finished building: default.size.stdout
+ 
+Finished building: line_follower.list
+ 

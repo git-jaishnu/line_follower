@@ -25,9 +25,8 @@ void binarizeSensors(Sensor_Array *sensor_array);
 
 
 float get_line_error(Sensor_Array *sensor_array);
-void jugaad(Sensor_Array *sensor_array, int speed);
 int calculate_pid(PID_Controller *pid, float error, float dt);
-int count_active_sensors(Sensor_Array *sensor_array);
+//int count_active_sensors(Sensor_Array *sensor_array);
 
 
 #endif /* INC_SENSOR_MODULE_H_ */

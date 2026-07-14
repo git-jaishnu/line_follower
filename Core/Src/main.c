@@ -81,10 +81,10 @@ static void MX_USART1_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-float sensor_weights[NUM_SENSORS] = { -5, -4, -2, -1, 1, 2, 4, 5, 0 };
+float sensor_weights[NUM_SENSORS] = { -4.5, -3.5, -2, -1, 1, 2, 3.5, 4.5, 0 };
 
-#define CORNER_SPEED_GAIN   100
-#define MIN_CRUISE_SPEED   300
+#define CORNER_SPEED_GAIN   10
+#define MIN_CRUISE_SPEED   400
 
 volatile float line;
 volatile int line2;
@@ -267,12 +267,16 @@ int main(void)
 				}
 				Sync_Sensors(&sensor_array);
 				processSensors(&sensor_array);
+				binarizeSensors(&sensor_array);
 				if (start == 1) {
 					if (sensor_array.array[8].on==0)
 					{
 						jugaad (&sensor_array , 500);
-						turn_jugaad(&sensor_array, correction, base_speed);
+						turn_jugaad(&sensor_array, correction, 600);
 					}
+					Sync_Sensors(&sensor_array);
+					processSensors(&sensor_array);
+					binarizeSensors(&sensor_array);
 					line = get_line_error(&sensor_array);
 					correction = calculate_pid(&pid, line, dt);
 					base_speed = sensor_array.base_speed;

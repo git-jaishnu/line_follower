@@ -51,38 +51,60 @@ void follow_line(int correction, int base_speed) {
 	set_motor_speed(left_speed, right_speed, battery_voltage(dma_buffer));
 }
 
-void turn_jugaad(Sensor_Array *sa, int correction, int base_speed) {
-	if ((( sa->array[3].on + sa->array[4].on + sa->array[5].on + sa->array[6].on + sa->array[7].on) >= 3) && ((sa->array[0].on + sa->array[1].on + sa->array[2].on) == 0))
-	{
-		set_motor_speed(700, -700, battery_voltage(dma_buffer));
-		while(1)
-		{
-			processSensors(sa);
-			binarizeSensors(sa);
-			if (sa->array[3].on == 1 || sa->array[4].on == 1) {
-				break;
-			}
-			HAL_Delay(5);
+#define JUGAAD_REALIGN_TIMEOUT_MS 5000
+
+volatile TurnPriority turn_priority = TURN_PRIORITY_LEFT;
+
+#define BRAKE_SPEED 200
+#define BRAKE_MS    20
+
+static void kill_momentum(void) {
+	if (BRAKE_MS > 0) {
+		set_motor_speed(-BRAKE_SPEED, -BRAKE_SPEED, battery_voltage(dma_buffer));
+		HAL_Delay(BRAKE_MS);
+	}
+}
+
+static void point_turn_until_aligned(Sensor_Array *sa, int dir, int speed) {
+	kill_momentum();
+	set_motor_speed(dir * speed, -dir * speed, battery_voltage(dma_buffer));
+
+	uint32_t start_tick = HAL_GetTick();
+	while ((HAL_GetTick() - start_tick) < JUGAAD_REALIGN_TIMEOUT_MS) {
+		Sync_Sensors(sa);
+		processSensors(sa);
+		binarizeSensors(sa);
+		if (sa->array[3].on == 1 || sa->array[4].on == 1) {
+			break;
 		}
-		set_motor_speed(0, 0, battery_voltage(dma_buffer));
 		HAL_Delay(5);
 	}
-	else if ((( sa->array[0].on + sa->array[1].on + sa->array[2].on + sa->array[3].on + sa->array[4].on ) >= 3 ) && ((sa->array[5].on + sa->array[6].on + sa->array[7].on) == 0))
-	{
-		set_motor_speed(-700, 700, battery_voltage(dma_buffer));
-		while(1)
-		{
-			processSensors(sa);
-			binarizeSensors(sa);
-			if (sa->array[3].on == 1 || sa->array[4].on == 1) {
-				break;
-			}
-			HAL_Delay(5);
-		}
-		set_motor_speed(0, 0, battery_voltage(dma_buffer));
-		HAL_Delay(5);
-	}
+	set_motor_speed(-dir * speed, dir * speed, battery_voltage(dma_buffer));
+	HAL_Delay(5);
+}
+
+void turn_jugaad(Sensor_Array *sa, int correction, int speed) {
 	Sync_Sensors(sa);
 	processSensors(sa);
 	binarizeSensors(sa);
+	if (((sa->array[3].on + sa->array[4].on + sa->array[5].on + sa->array[6].on + sa->array[7].on) >= 2)
+			&& ((sa->array[0].on + sa->array[1].on + sa->array[2].on) == 0)) {
+		point_turn_until_aligned(sa, 1, speed);
+	}
+	else if (((sa->array[0].on + sa->array[1].on + sa->array[2].on + sa->array[3].on + sa->array[4].on) >= 2)
+			&& ((sa->array[5].on + sa->array[6].on + sa->array[7].on) == 0)) {
+		point_turn_until_aligned(sa, -1, speed);
+	}
+}
+
+void jugaad(Sensor_Array *sa, int speed) {
+	Sync_Sensors(sa);
+	processSensors(sa);
+	binarizeSensors(sa);
+	if ((sa->array[1].on == 1 && sa->array[6].on == 1)
+			&& (sa->array[2].on == 1 && sa->array[5].on == 1)
+			&& (sa->array[0].on == 0 && sa->array[7].on == 0)) {
+		int dir = (turn_priority == TURN_PRIORITY_RIGHT) ? 1 : -1;
+		point_turn_until_aligned(sa, dir, speed);
+	}
 }

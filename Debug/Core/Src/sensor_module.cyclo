@@ -3,5 +3,4 @@
 ../Core/Src/sensor_module.c:23:6:processSensors	3
 ../Core/Src/sensor_module.c:34:6:binarizeSensors	3
 ../Core/Src/sensor_module.c:44:7:get_line_error	3
-../Core/Src/sensor_module.c:63:6:jugaad	5
-../Core/Src/sensor_module.c:73:5:calculate_pid	6
+../Core/Src/sensor_module.c:62:5:calculate_pid	6

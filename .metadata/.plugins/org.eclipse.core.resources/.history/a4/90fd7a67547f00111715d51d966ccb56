@@ -1,0 +1,109 @@
+#include "main.h"
+#include "stm32f4xx_hal.h"
+#include  "utils.h"
+#include "sensor_module.h"
+#include "motor.h"
+void set_motor_speed(int left_motor, int right_motor, float battery_voltage) {
+	uint16_t Right_Forward = GPIO_PIN_14;
+	uint16_t Right_Backward = GPIO_PIN_15;
+	uint16_t Left_Backward = GPIO_PIN_12;
+	uint16_t Left_Forward = GPIO_PIN_13;
+	if (battery_voltage < 1.0f) {
+		battery_voltage = 12.4f;
+	}
+	left_motor = (int) ((left_motor * 12.4f) / battery_voltage);
+	right_motor = (int) ((right_motor * 12.4f) / battery_voltage);
+
+	left_motor = constrain_int(left_motor, -999, 999);
+	right_motor = constrain_int(right_motor, -999, 999);
+	if (left_motor > 0) {
+		HAL_GPIO_WritePin(GPIOB, Left_Forward, 1);
+		HAL_GPIO_WritePin(GPIOB, Left_Backward, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, left_motor);
+	} else if (left_motor < 0) {
+		HAL_GPIO_WritePin(GPIOB, Left_Forward, 0);
+		HAL_GPIO_WritePin(GPIOB, Left_Backward, 1);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, (left_motor * -1));
+	} else {
+		HAL_GPIO_WritePin(GPIOB, Left_Forward, 0);
+		HAL_GPIO_WritePin(GPIOB, Left_Backward, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+	}
+
+	if (right_motor > 0) {
+		HAL_GPIO_WritePin(GPIOB, Right_Forward, 1);
+		HAL_GPIO_WritePin(GPIOB, Right_Backward, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, right_motor);
+	} else if (right_motor < 0) {
+		HAL_GPIO_WritePin(GPIOB, Right_Forward, 0);
+		HAL_GPIO_WritePin(GPIOB, Right_Backward, 1);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, (right_motor * -1));
+	} else {
+		HAL_GPIO_WritePin(GPIOB, Right_Forward, 0);
+		HAL_GPIO_WritePin(GPIOB, Right_Backward, 0);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
+	}
+}
+
+void follow_line(int correction, int base_speed) {
+	int left_speed = base_speed + correction;
+	int right_speed = base_speed - correction;
+	set_motor_speed(left_speed, right_speed, battery_voltage(dma_buffer));
+}
+
+#define JUGAAD_REALIGN_TIMEOUT_MS 5000
+
+volatile TurnPriority turn_priority = TURN_PRIORITY_RIGHT;
+
+#define BRAKE_SPEED 100
+#define BRAKE_MS    10
+
+static void kill_momentum(void) {
+	if (BRAKE_MS > 0) {
+		set_motor_speed(-BRAKE_SPEED, -BRAKE_SPEED, battery_voltage(dma_buffer));
+		HAL_Delay(BRAKE_MS);
+	}
+}
+
+static void point_turn_until_aligned(Sensor_Array *sa, int dir, int speed) {
+	kill_momentum();
+	set_motor_speed(dir * speed, -dir * speed, battery_voltage(dma_buffer));
+
+	uint32_t start_tick = HAL_GetTick();
+	while ((HAL_GetTick() - start_tick) < JUGAAD_REALIGN_TIMEOUT_MS) {
+		Sync_Sensors(sa);
+		processSensors(sa);
+		binarizeSensors(sa);
+		if (sa->array[3].on == 1 || sa->array[4].on == 1) {
+			break;
+		}
+		HAL_Delay(5);
+	}
+	set_motor_speed(0, 0, battery_voltage(dma_buffer));
+	HAL_Delay(5);
+}
+
+void turn_jugaad(Sensor_Array *sa, int correction, int speed) {
+	if (((sa->array[3].on + sa->array[4].on + sa->array[5].on + sa->array[6].on + sa->array[7].on) >= 2)
+			&& ((sa->array[0].on + sa->array[1].on + sa->array[2].on) == 0)) {
+		point_turn_until_aligned(sa, 1, speed);
+	}
+	else if (((sa->array[0].on + sa->array[1].on + sa->array[2].on + sa->array[3].on + sa->array[4].on) >= 2)
+			&& ((sa->array[5].on + sa->array[6].on + sa->array[7].on) == 0)) {
+		point_turn_until_aligned(sa, -1, speed);
+	}
+	Sync_Sensors(sa);
+	processSensors(sa);
+	binarizeSensors(sa);
+}
+
+void jugaad(Sensor_Array *sa, int speed) {
+	if ((sa->array[1].on == 1 && sa->array[6].on == 1)
+			&& (sa->array[2].on == 1 && sa->array[5].on == 1)) {
+		int dir = (turn_priority == TURN_PRIORITY_RIGHT) ? 1 : -1;
+		point_turn_until_aligned(sa, dir, speed);
+	}
+	Sync_Sensors(sa);
+	processSensors(sa);
+	binarizeSensors(sa);
+}

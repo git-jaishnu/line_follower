@@ -50,3 +50,39 @@ void follow_line(int correction, int base_speed) {
 	int right_speed = base_speed - correction;
 	set_motor_speed(left_speed, right_speed, battery_voltage(dma_buffer));
 }
+
+void turn_jugaad(Sensor_Array *sa, int correction, int base_speed) {
+	if ((( sa->array[3].on + sa->array[4].on + sa->array[5].on + sa->array[6].on + sa->array[7].on) >= 3) && ((sa->array[0].on + sa->array[1].on + sa->array[2].on) == 0))
+	{
+		set_motor_speed(700, -700, battery_voltage(dma_buffer));
+		while(1)
+		{
+			processSensors(sa);
+			binarizeSensors(sa);
+			if (sa->array[3].on == 1 || sa->array[4].on == 1) {
+				break;
+			}
+			HAL_Delay(5);
+		}
+		set_motor_speed(0, 0, battery_voltage(dma_buffer));
+		HAL_Delay(5);
+	}
+	else if ((( sa->array[0].on + sa->array[1].on + sa->array[2].on + sa->array[3].on + sa->array[4].on ) >= 3 ) && ((sa->array[5].on + sa->array[6].on + sa->array[7].on) == 0))
+	{
+		set_motor_speed(-700, 700, battery_voltage(dma_buffer));
+		while(1)
+		{
+			processSensors(sa);
+			binarizeSensors(sa);
+			if (sa->array[3].on == 1 || sa->array[4].on == 1) {
+				break;
+			}
+			HAL_Delay(5);
+		}
+		set_motor_speed(0, 0, battery_voltage(dma_buffer));
+		HAL_Delay(5);
+	}
+	Sync_Sensors(sa);
+	processSensors(sa);
+	binarizeSensors(sa);
+}

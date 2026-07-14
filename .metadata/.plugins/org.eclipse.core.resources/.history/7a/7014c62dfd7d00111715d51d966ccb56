@@ -1,0 +1,98 @@
+#include "stm32f4xx_hal.h"
+#include "utils.h"
+#include "motor.h"
+#include "sensor_module.h"
+volatile uint16_t dma_buffer[NUM_SENSORS + 1];
+void Initialize_Sensor_Array(Sensor_Array *sensor_array) {
+	for (int i = 0; i < NUM_SENSORS; i++) {
+		sensor_array->array[i].weight = sensor_array->weights[i];
+//		sensor_array->array[i].adc_min = 150;
+//		sensor_array->array[i].adc_max = 1800;
+		sensor_array->array[i].threshold = SENSOR_THRESHOLD;
+	}
+}
+void Sync_Sensors(Sensor_Array *sensor_array) {
+	sensor_array->array[0].adc_raw = dma_buffer[7];
+	sensor_array->array[1].adc_raw = dma_buffer[6];
+	sensor_array->array[2].adc_raw = dma_buffer[5];
+	sensor_array->array[3].adc_raw = dma_buffer[4];
+	sensor_array->array[4].adc_raw = dma_buffer[3];
+	sensor_array->array[5].adc_raw = dma_buffer[2];
+	sensor_array->array[6].adc_raw = dma_buffer[1];
+	sensor_array->array[7].adc_raw = dma_buffer[0];
+	sensor_array->array[8].adc_raw = dma_buffer[8];
+}
+void processSensors(Sensor_Array *sensor_array) {
+	for (int i = 0; i < NUM_SENSORS; i++) {
+		if (sensor_array->array[i].adc_raw >= sensor_array->array[i].threshold) {
+			sensor_array->array[i].mapped_value = sensor_array->array[i].adc_raw;
+			sensor_array->array[i].on = 1;
+		} else {
+			sensor_array->array[i].mapped_value = 0;
+			sensor_array->array[i].on = 0;
+		}
+	}
+}
+float get_line_error(Sensor_Array *sensor_array) {
+	float weighted_sum = 0;
+	float value_sum = 0;
+	static float last_error = 0;
+
+	for (int i = 1; i < NUM_SENSORS; i++) {
+		weighted_sum += (float) (sensor_array->array[i].mapped_value)
+				* (sensor_array->array[i].weight);
+		value_sum += (float) sensor_array->array[i].mapped_value;
+	}
+
+	if (value_sum < 1.0f)
+		return last_error;
+
+	float out = weighted_sum / value_sum;
+	last_error = out;
+	return out;
+}
+
+void jugaad(Sensor_Array *sa, int speed) {
+	if ((sa->array[2].on == 1 && sa->array[7].on == 1)||(sa->array[3].on == 1 && sa->array[6].on == 1)||(sa->array[1].on == 1 && sa->array[8].on == 1)) {
+		set_motor_speed(800, -600, battery_voltage(dma_buffer));
+		HAL_Delay(45);
+//		set_motor_speed(400, 400, battery_voltage(dma_buffer));
+	}
+//	else if (sa->array[0].on == 1 && sa->array[1].on == 1 && (sa->array[2].on + sa->array[3].on + sa->array[4].on + sa->array[5].on + sa->array[6].on + sa->array[7].on == 0))
+//	{
+//		set_motor_speed(800, -800, battery_voltage(dma_buffer));
+//		HAL_Delay(35);
+//	}
+}
+
+int calculate_pid(PID_Controller *pid, float error, float dt) {
+	if (dt <= 0.0f)
+		dt = 0.001f;
+	float P = pid->Kp * error;
+	pid->integral += (error * dt);
+	if (pid->integral > pid->limit)
+		pid->integral = pid->limit;
+	if (pid->integral < -pid->limit)
+		pid->integral = -pid->limit;
+	float I = pid->Ki * pid->integral;
+
+	const float D_FILTER = 1.0f;
+	float raw_D = pid->Kd * (error - pid->last_error) / dt;
+	pid->filtered_D = D_FILTER * raw_D + (1.0f - D_FILTER) * pid->filtered_D;
+	float D = pid->filtered_D;
+
+	pid->last_error = error;
+	float output = (P + I + D)*50.0f;
+	if (output > pid->limit)
+		output = pid->limit;
+	if (output < -pid->limit)
+		output = -pid->limit;
+	return (int) output;
+}
+//int count_active_sensors(Sensor_Array *sensor_array) {
+//	int active_count = 0;
+//	for (int i = 0; i < NUM_SENSORS; i++) {
+//		active_count += sensor_array->array[i].on;
+//	}
+//	return active_count;
+//}

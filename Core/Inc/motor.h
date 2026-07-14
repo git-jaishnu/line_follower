@@ -12,6 +12,6 @@
 
 void follow_line(int correction, int base_speed);
 void set_motor_speed(int left_motor , int right_motor , float battery_voltage);
-
+void turn_jugaad(Sensor_Array *sa, int correction, int base_speed);
 
 #endif /* INC_MOTOR_H_ */

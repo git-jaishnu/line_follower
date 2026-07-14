@@ -19,8 +19,6 @@ typedef struct {
 
 typedef struct {
 	uint16_t adc_raw;
-	uint16_t adc_max;
-	uint16_t adc_min;
 	int16_t weight;
 	int threshold;
 	int mapped_value;
@@ -33,19 +31,19 @@ typedef struct {
 typedef struct {
 	int number_of_sensors;
 	Sensor *array;
-	int *weights;
+	float *weights;
 	int base_speed;
 
 } Sensor_Array;
 
 
-typedef enum {
-    NO_JUNCTION    = 0,
-    LEFT_JUNCTION  = 1,
-    RIGHT_JUNCTION = 2,
-    T_JUNCTION     = 3,
-    CROSS_JUNCTION = 4
-} JunctionType;
+//typedef enum {
+//    NO_JUNCTION    = 0,
+//    LEFT_JUNCTION  = 1,
+//    RIGHT_JUNCTION = 2,
+//    T_JUNCTION     = 3,
+//    CROSS_JUNCTION = 4
+//} JunctionType;
 
 typedef enum {
     TURN_PRIORITY_LEFT  = 0,

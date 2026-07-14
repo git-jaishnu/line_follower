@@ -4,10 +4,8 @@
 #include "sensor_module.h"
 volatile uint16_t dma_buffer[NUM_SENSORS + 1];
 void Initialize_Sensor_Array(Sensor_Array *sensor_array) {
-	for (int i = 0; i < sensor_array->number_of_sensors; i++) {
+	for (int i = 0; i < NUM_SENSORS; i++) {
 		sensor_array->array[i].weight = sensor_array->weights[i];
-		sensor_array->array[i].adc_min = 140;
-		sensor_array->array[i].adc_max = 240;
 		sensor_array->array[i].threshold = SENSOR_THRESHOLD;
 	}
 }
@@ -20,64 +18,41 @@ void Sync_Sensors(Sensor_Array *sensor_array) {
 	sensor_array->array[5].adc_raw = dma_buffer[2];
 	sensor_array->array[6].adc_raw = dma_buffer[1];
 	sensor_array->array[7].adc_raw = dma_buffer[0];
-}
-void autoCalibrate(Sensor_Array *sensor_array, uint32_t duration_ms, int speed) {
-	for (int i = 0; i < sensor_array->number_of_sensors; i++) {
-		sensor_array->array[i].adc_min = 0;
-		sensor_array->array[i].adc_max = 4095;
-	}
-	set_motor_speed(-speed, speed, battery_voltage(dma_buffer));
-	uint32_t startTime = HAL_GetTick();
-	while (HAL_GetTick() - startTime < duration_ms) {
-		Sync_Sensors(sensor_array);
-		for (int i = 0; i < NUM_SENSORS; i++) {
-			if (sensor_array->array[i].adc_raw < sensor_array->array[i].adc_min)
-				sensor_array->array[i].adc_min = sensor_array->array[i].adc_raw;
-			if (sensor_array->array[i].adc_raw > sensor_array->array[i].adc_max)
-				sensor_array->array[i].adc_max = sensor_array->array[i].adc_raw;
-		}
-		HAL_Delay(1);
-	}
-	set_motor_speed(0, 0, battery_voltage(dma_buffer));
+	sensor_array->array[8].adc_raw = dma_buffer[8];
 }
 void processSensors(Sensor_Array *sensor_array) {
-	for (int i = 0; i < sensor_array->number_of_sensors; i++) {
-		int range = sensor_array->array[i].adc_max
-				- sensor_array->array[i].adc_min;
-		if (range <= 0)
-			range = 1;
-		int norm = ((int) (sensor_array->array[i].adc_raw
-				- sensor_array->array[i].adc_min) * 1000) / range;
-		norm = constrain_int(norm, 0, 1000);
-		if (sensor_array->array[i].adc_raw > 180) {
-			sensor_array->array[i].mapped_value = norm;
+	for (int i = 0; i < NUM_SENSORS; i++) {
+		if (sensor_array->array[i].adc_raw >= sensor_array->array[i].threshold) {
+			sensor_array->array[i].mapped_value = sensor_array->array[i].adc_raw;
+			sensor_array->array[i].on = 1;
 		} else {
 			sensor_array->array[i].mapped_value = 0;
+			sensor_array->array[i].on = 0;
 		}
 	}
 }
-void binarizeSensors(Sensor_Array *sensor_array) {
+void binarizeSensors(Sensor_Array *sensor_array)
+{
 	for (int i = 0; i < NUM_SENSORS; i++) {
-		if (sensor_array->array[i].mapped_value > sensor_array->array[i].threshold) {
+		if (sensor_array->array[i].adc_raw >= 1800) {
 			sensor_array->array[i].on = 1;
 		} else {
 			sensor_array->array[i].on = 0;
 		}
 	}
 }
-
 float get_line_error(Sensor_Array *sensor_array) {
 	float weighted_sum = 0;
 	float value_sum = 0;
 	static float last_error = 0;
 
-	for (int i = 0; i < NUM_SENSORS; i++) {
+	for (int i = 0; i < NUM_SENSORS-1; i++) {
 		weighted_sum += (float) (sensor_array->array[i].mapped_value)
 				* (sensor_array->array[i].weight);
 		value_sum += (float) sensor_array->array[i].mapped_value;
 	}
 
-	if (value_sum < 50.0f)
+	if (value_sum < 1.0f)
 		return last_error;
 
 	float out = weighted_sum / value_sum;
@@ -85,10 +60,14 @@ float get_line_error(Sensor_Array *sensor_array) {
 	return out;
 }
 
-JunctionType detect_junction(Sensor_Array *sensor_array) {
-	int active = count_active_sensors(sensor_array);
-	// working on it...
-	return NO_JUNCTION;
+void jugaad(Sensor_Array *sa, int speed) {
+	if ((sa->array[1].on == 1 && sa->array[6].on == 1)&&(sa->array[2].on == 1 && sa->array[5].on == 1)) {
+		set_motor_speed(700, -700, battery_voltage(dma_buffer));
+		HAL_Delay(100);
+	}
+	Sync_Sensors(sa);
+	processSensors(sa);
+	binarizeSensors(sa);
 }
 
 int calculate_pid(PID_Controller *pid, float error, float dt) {
@@ -102,7 +81,7 @@ int calculate_pid(PID_Controller *pid, float error, float dt) {
 		pid->integral = -pid->limit;
 	float I = pid->Ki * pid->integral;
 
-	const float D_FILTER = 0.3f;
+	const float D_FILTER = 1.0f;
 	float raw_D = pid->Kd * (error - pid->last_error) / dt;
 	pid->filtered_D = D_FILTER * raw_D + (1.0f - D_FILTER) * pid->filtered_D;
 	float D = pid->filtered_D;
@@ -115,10 +94,10 @@ int calculate_pid(PID_Controller *pid, float error, float dt) {
 		output = -pid->limit;
 	return (int) output;
 }
-int count_active_sensors(Sensor_Array *sensor_array) {
-	int active_count = 0;
-	for (int i = 0; i < sensor_array->number_of_sensors; i++) {
-		active_count += sensor_array->array[i].on;
-	}
-	return active_count;
-}
+//int count_active_sensors(Sensor_Array *sensor_array) {
+//	int active_count = 0;
+//	for (int i = 0; i < NUM_SENSORS; i++) {
+//		active_count += sensor_array->array[i].on;
+//	}
+//	return active_count;
+//}

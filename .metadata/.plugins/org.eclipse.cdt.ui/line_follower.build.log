@@ -1,10 +1,10 @@
-02:55:07 **** Incremental Build of configuration Debug for project line_follower ****
+15:31:14 **** Incremental Build of configuration Debug for project line_follower ****
 make -j12 all 
 arm-none-eabi-size  line_follower.elf 
    text	   data	    bss	    dec	    hex	filename
-  48052	    508	   2604	  51164	   c7dc	line_follower.elf
+  47364	    508	   2604	  50476	   c52c	line_follower.elf
 Finished building: default.size.stdout
  
 
-02:55:08 Build Finished. 0 errors, 0 warnings. (took 1s.442ms)
+15:31:15 Build Finished. 0 errors, 0 warnings. (took 1s.6ms)
 

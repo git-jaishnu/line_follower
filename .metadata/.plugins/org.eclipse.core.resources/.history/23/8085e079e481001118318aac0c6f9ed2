@@ -96,8 +96,7 @@ int calculate_pid(PID_Controller *pid, float error, float dt) {
 		pid->integral = -pid->limit;
 	float I = pid->Ki * pid->integral;
 
-	const float D_FILTER = 0.2f; // 0 < D_FILTER < 1: lower = more smoothing. Was 1.0f, which
-	                              // disabled the low-pass filter entirely (filtered_D == raw_D).
+	const float D_FILTER = 1.0f;
 	float raw_D = pid->Kd * (error - pid->last_error) / dt;
 	pid->filtered_D = D_FILTER * raw_D + (1.0f - D_FILTER) * pid->filtered_D;
 	float D = pid->filtered_D;

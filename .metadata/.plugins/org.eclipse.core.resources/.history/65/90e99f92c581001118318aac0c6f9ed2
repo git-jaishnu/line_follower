@@ -155,18 +155,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 
 void Send_Telemetry() {
-    // static: HAL_UART_Transmit_IT() is non-blocking and returns immediately while
-    // the interrupt-driven transfer continues in the background. A stack-local buffer
-    // would go out of scope before the transfer finishes and corrupt the output.
-    static char buf[160];
+    char buf[160];
     char ir_part[80] = "IR:";
     char tmp[8];
-
-    // Don't queue a new transmit while the previous one is still going out -
-    // HAL_UART_Transmit_IT will just return HAL_BUSY and drop the packet.
-    if (huart1.gState != HAL_UART_STATE_READY) {
-        return;
-    }
 
     for (int i = 0; i < sensor_array.number_of_sensors; i++) {
         snprintf(tmp, sizeof(tmp), "%u", (uint16_t)sensor_array.array[i].adc_raw);
@@ -182,7 +173,7 @@ void Send_Telemetry() {
         b, (float)line, (float)correction
     );
 
-    HAL_UART_Transmit_IT(&huart1, (uint8_t*)buf, strlen(buf));
+    HAL_UART_Transmit(&huart1, (uint8_t*)buf, strlen(buf), 200);
 }
 
 /* USER CODE END 0 */
@@ -275,11 +266,14 @@ int main(void)
 				    Send_Telemetry();
 				}
 				if (start == 1) {
-//					if (sensor_array.array[8].on==0)
-//					{
-//						jugaad (&sensor_array , 900);
-//						turn_jugaad(&sensor_array, correction, 900);
-//					}
+					if (sensor_array.array[8].on==0)
+					{
+						jugaad (&sensor_array , 900);
+						turn_jugaad(&sensor_array, correction, 900);
+					}
+					Sync_Sensors(&sensor_array);
+					processSensors(&sensor_array);
+					binarizeSensors(&sensor_array);
 					line = get_line_error(&sensor_array);
 					correction = calculate_pid(&pid, line, dt);
 					base_speed = sensor_array.base_speed;

@@ -1,6 +1,6 @@
 ../Core/Src/motor.c:6:6:set_motor_speed	6
-../Core/Src/motor.c:48:6:follow_line	1
-../Core/Src/motor.c:61:13:kill_momentum	1
-../Core/Src/motor.c:68:13:point_turn_until_aligned	4
-../Core/Src/motor.c:86:6:turn_jugaad	5
-../Core/Src/motor.c:100:6:jugaad	8
+../Core/Src/motor.c:47:6:follow_line	1
+../Core/Src/motor.c:60:13:kill_momentum	1
+../Core/Src/motor.c:67:13:point_turn_until_aligned	4
+../Core/Src/motor.c:82:6:turn_jugaad	11
+../Core/Src/motor.c:98:6:jugaad	10

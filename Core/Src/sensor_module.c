@@ -3,10 +3,18 @@
 #include "motor.h"
 #include "sensor_module.h"
 volatile uint16_t dma_buffer[NUM_SENSORS + 1];
-void Initialize_Sensor_Array(Sensor_Array *sensor_array) {
+void Initialize_Sensor_Array(Sensor_Array *sensor_array, int calibrate) {
 	for (int i = 0; i < NUM_SENSORS; i++) {
 		sensor_array->array[i].weight = sensor_array->weights[i];
-		sensor_array->array[i].threshold = SENSOR_THRESHOLD;
+	}
+	if (calibrate == 1) {
+		Sync_Sensors(sensor_array);
+		autoCalibrate(sensor_array, 4000, 500);
+	} else {
+		for (int i = 0; i < NUM_SENSORS; i++) {
+			sensor_array->array[i].threshold = SENSOR_DEFAULT_THRESHOLD;
+			sensor_array->array[i].bin = SENSOR_DEFAULT_BIN;
+		}
 	}
 }
 void Sync_Sensors(Sensor_Array *sensor_array) {
@@ -24,22 +32,40 @@ void processSensors(Sensor_Array *sensor_array) {
 	for (int i = 0; i < NUM_SENSORS; i++) {
 		if (sensor_array->array[i].adc_raw >= sensor_array->array[i].threshold) {
 			sensor_array->array[i].mapped_value = sensor_array->array[i].adc_raw;
-			sensor_array->array[i].on = 1;
 		} else {
 			sensor_array->array[i].mapped_value = 0;
-			sensor_array->array[i].on = 0;
 		}
 	}
 }
 void binarizeSensors(Sensor_Array *sensor_array)
 {
 	for (int i = 0; i < NUM_SENSORS; i++) {
-		if (sensor_array->array[i].adc_raw >= 1800) {
+		if (sensor_array->array[i].adc_raw >= sensor_array->array[i].bin) {
 			sensor_array->array[i].on = 1;
 		} else {
 			sensor_array->array[i].on = 0;
 		}
 	}
+}
+void autoCalibrate(Sensor_Array *sensor_array, uint32_t duration_ms, int speed) {
+	for (int i = 0; i < NUM_SENSORS; i++) {
+		sensor_array->array[i].adc_min = 50000;
+		sensor_array->array[i].adc_max = 0;
+	}
+	set_motor_speed(-speed, speed, battery_voltage(dma_buffer));
+	uint32_t startTime = HAL_GetTick();
+	while (HAL_GetTick() - startTime < duration_ms) {
+		Sync_Sensors(sensor_array);
+		for (int i = 0; i < NUM_SENSORS; i++) {
+			if (sensor_array->array[i].adc_raw < sensor_array->array[i].adc_min)
+				sensor_array->array[i].adc_min = sensor_array->array[i].adc_raw;
+			if (sensor_array->array[i].adc_raw > sensor_array->array[i].adc_max)
+				sensor_array->array[i].adc_max = sensor_array->array[i].adc_raw;
+			sensor_array->array[i].threshold = sensor_array->array[i].adc_min * 6/5;
+			sensor_array->array[i].bin = sensor_array->array[i].adc_min + ((sensor_array->array[i].adc_max - sensor_array->array[i].adc_min)/3);
+		}
+	}
+	set_motor_speed(0, 0, battery_voltage(dma_buffer));
 }
 float get_line_error(Sensor_Array *sensor_array) {
 	float weighted_sum = 0;

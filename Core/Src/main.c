@@ -81,9 +81,9 @@ static void MX_USART1_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-float sensor_weights[NUM_SENSORS] = { -4.5, -3.5, -2, -1, 1, 2, 3.5, 4.5, 0 };
+float sensor_weights[NUM_SENSORS] = { -7.5, -6.0, -2.5, -1, 1, 2.5, 6.0, 7.5, 0 };
 
-#define CORNER_SPEED_GAIN   10
+#define CORNER_SPEED_GAIN   140
 #define MIN_CRUISE_SPEED   400
 
 volatile float line;
@@ -226,10 +226,10 @@ int main(void)
 	sensor_array.array = sensors;
 	sensor_array.weights = sensor_weights;
 	sensor_array.base_speed = BASE_SPEED;
-//	int cornering_speed;
+	int cornering_speed;
 	int base_speed;
 
-	Initialize_Sensor_Array(&sensor_array);
+	Initialize_Sensor_Array(&sensor_array , 0);
 
 	pid.Kd = 2;
 	pid.Ki = 0.0;
@@ -248,8 +248,8 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	while (1) {
 
+	while (1) {
 
 		b = battery_voltage(dma_buffer);
 				Sync_Sensors(&sensor_array);
@@ -265,14 +265,11 @@ int main(void)
 				    last_telem = HAL_GetTick();
 				    Send_Telemetry();
 				}
-				Sync_Sensors(&sensor_array);
-				processSensors(&sensor_array);
-				binarizeSensors(&sensor_array);
 				if (start == 1) {
 					if (sensor_array.array[8].on==0)
 					{
-						jugaad (&sensor_array , 500);
-						turn_jugaad(&sensor_array, correction, 600);
+						jugaad (&sensor_array , 900);
+						turn_jugaad(&sensor_array, correction, 900);
 					}
 					Sync_Sensors(&sensor_array);
 					processSensors(&sensor_array);
@@ -280,11 +277,11 @@ int main(void)
 					line = get_line_error(&sensor_array);
 					correction = calculate_pid(&pid, line, dt);
 					base_speed = sensor_array.base_speed;
-//					cornering_speed =base_speed
-//							- (int) (fabsf(line) * CORNER_SPEED_GAIN);
-//					cornering_speed = constrain_int(cornering_speed,
-//							MIN_CRUISE_SPEED, base_speed);
-					follow_line(correction, base_speed);
+					cornering_speed =base_speed
+							- (int) (fabsf(line) * CORNER_SPEED_GAIN);
+					cornering_speed = constrain_int(cornering_speed,
+							MIN_CRUISE_SPEED, base_speed);
+					follow_line(correction, cornering_speed);
 				}
 				else {
 				    set_motor_speed(0, 0, b);

@@ -1,6 +1,7 @@
 ../Core/Src/sensor_module.c:6:6:Initialize_Sensor_Array	24	static
-../Core/Src/sensor_module.c:12:6:Sync_Sensors	16	static
-../Core/Src/sensor_module.c:23:6:processSensors	24	static
-../Core/Src/sensor_module.c:34:6:binarizeSensors	24	static
-../Core/Src/sensor_module.c:44:7:get_line_error	32	static
-../Core/Src/sensor_module.c:62:5:calculate_pid	48	static
+../Core/Src/sensor_module.c:20:6:Sync_Sensors	16	static
+../Core/Src/sensor_module.c:31:6:processSensors	24	static
+../Core/Src/sensor_module.c:40:6:binarizeSensors	24	static
+../Core/Src/sensor_module.c:50:6:autoCalibrate	48	static
+../Core/Src/sensor_module.c:70:7:get_line_error	32	static
+../Core/Src/sensor_module.c:88:5:calculate_pid	48	static

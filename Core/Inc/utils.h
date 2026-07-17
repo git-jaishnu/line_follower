@@ -14,15 +14,15 @@
 #define RX_BUFFER_SIZE 30
 #define NUM_SENSORS 9
 #define BASE_SPEED 500
-#define SENSOR_THRESHOLD 1500
+#define SENSOR_THRESHOLD 2000
 #define TURN_SPEED 500
+
+#define SENSOR_DEFAULT_THRESHOLD SENSOR_THRESHOLD
+#define SENSOR_DEFAULT_BIN  2000
 
 
 #define MAX_I 1
 #define MIN_I 0
-
-
-
 
 
 float constrain_float(float x, float min, float max);

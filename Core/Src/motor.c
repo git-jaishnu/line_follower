@@ -29,7 +29,6 @@ void set_motor_speed(int left_motor, int right_motor, float battery_voltage) {
 		HAL_GPIO_WritePin(GPIOB, Left_Backward, 0);
 		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
 	}
-
 	if (right_motor > 0) {
 		HAL_GPIO_WritePin(GPIOB, Right_Forward, 1);
 		HAL_GPIO_WritePin(GPIOB, Right_Backward, 0);
@@ -55,10 +54,10 @@ void follow_line(int correction, int base_speed) {
 
 volatile TurnPriority turn_priority = TURN_PRIORITY_LEFT;
 
-#define BRAKE_SPEED 200
-#define BRAKE_MS    20
+#define BRAKE_SPEED 500
+#define BRAKE_MS    30
 
-static void kill_momentum(void) {
+static void kill_momentum() {
 	if (BRAKE_MS > 0) {
 		set_motor_speed(-BRAKE_SPEED, -BRAKE_SPEED, battery_voltage(dma_buffer));
 		HAL_Delay(BRAKE_MS);
@@ -66,7 +65,6 @@ static void kill_momentum(void) {
 }
 
 static void point_turn_until_aligned(Sensor_Array *sa, int dir, int speed) {
-	kill_momentum();
 	set_motor_speed(dir * speed, -dir * speed, battery_voltage(dma_buffer));
 
 	uint32_t start_tick = HAL_GetTick();
@@ -77,22 +75,22 @@ static void point_turn_until_aligned(Sensor_Array *sa, int dir, int speed) {
 		if (sa->array[3].on == 1 || sa->array[4].on == 1) {
 			break;
 		}
-		HAL_Delay(5);
 	}
-	set_motor_speed(-dir * speed, dir * speed, battery_voltage(dma_buffer));
-	HAL_Delay(5);
+	set_motor_speed(0, 0, battery_voltage(dma_buffer));
 }
 
 void turn_jugaad(Sensor_Array *sa, int correction, int speed) {
 	Sync_Sensors(sa);
 	processSensors(sa);
 	binarizeSensors(sa);
-	if (((sa->array[3].on + sa->array[4].on + sa->array[5].on + sa->array[6].on + sa->array[7].on) >= 2)
-			&& ((sa->array[0].on + sa->array[1].on + sa->array[2].on) == 0)) {
+	if ((sa->array[6].on == 1 && sa->array[7].on == 1)
+			&& (sa->array[0].on == 0 && sa->array[1].on == 0 && sa->array[2].on == 0)) {
+		kill_momentum();
 		point_turn_until_aligned(sa, 1, speed);
 	}
-	else if (((sa->array[0].on + sa->array[1].on + sa->array[2].on + sa->array[3].on + sa->array[4].on) >= 2)
-			&& ((sa->array[5].on + sa->array[6].on + sa->array[7].on) == 0)) {
+	else if ((sa->array[0].on == 1 && sa->array[1].on == 1)
+			&& (sa->array[5].on == 0 && sa->array[6].on == 0 && sa->array[7].on == 0)) {
+		kill_momentum();
 		point_turn_until_aligned(sa, -1, speed);
 	}
 }
@@ -102,9 +100,11 @@ void jugaad(Sensor_Array *sa, int speed) {
 	processSensors(sa);
 	binarizeSensors(sa);
 	if ((sa->array[1].on == 1 && sa->array[6].on == 1)
+			&& (sa->array[3].on == 1 && sa->array[4].on == 1)
 			&& (sa->array[2].on == 1 && sa->array[5].on == 1)
 			&& (sa->array[0].on == 0 && sa->array[7].on == 0)) {
 		int dir = (turn_priority == TURN_PRIORITY_RIGHT) ? 1 : -1;
+//		kill_momentum();
 		point_turn_until_aligned(sa, dir, speed);
 	}
 }

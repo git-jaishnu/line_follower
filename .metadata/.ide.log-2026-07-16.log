@@ -1,0 +1,2 @@
+2026-07-16 19:12:41,383 [ERROR] ConfigurationRetriever:142 - IOException on connection: Connect timed out
+2026-07-16 19:13:52,993 [ERROR] ConfigurationRetriever:142 - IOException on connection: Read timed out

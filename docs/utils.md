@@ -27,9 +27,9 @@ flowchart LR
     MATH --> VOLTS[Actual Voltage in Volts]
 ```
 
-$$\text{Voltage} = \frac{\left( \frac{\text{dma\_buffer}[\text{NUM\_SENSORS}] \times 3.3}{4095.0} \right)}{0.2475}$$
+$$\text{Voltage} = \frac{\text{ADC Reading} \times 3.3}{4095.0 \times 0.2475}$$
 
-- **`3.3`**: STM32 analog reference voltage ($V_{\text{REF}} = 3.3\text{V}$).
+- **`3.3`**: STM32 analog reference voltage ($V_{\text{REF}} = 3.3\text{ V}$).
 - **`4095.0`**: 12-bit ADC maximum digital resolution ($2^{12} - 1$).
 - **`0.2475`**: Resistor voltage divider attenuation factor ($\frac{R_2}{R_1 + R_2}$).
 

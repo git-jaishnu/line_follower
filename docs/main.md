@@ -70,7 +70,7 @@ The line follower relies on continuous multi-channel sampling without blocking t
 - **Direct Memory Access (DMA2 Stream 0)**: When an ADC conversion completes, the DMA controller automatically moves the 12-bit conversion value from the `ADC1->DR` data register into the target array [`dma_buffer`](file:///H:/Jaishnu/stm_workspace_2/line_follower/core/src/sensor_module.c#L13) in RAM.
 - **Efficiency Impact**: The CPU never executes wait loops or blocking reads for ADC conversions. When the main loop runs [`Sync_Sensors(&sensor_array)`](file:///H:/Jaishnu/stm_workspace_2/line_follower/docs/sensor_module.md#2-sync_sensors), fresh 12-bit sensor data is already present in RAM.
 
-$$\text{Battery Voltage} = \frac{\left( \frac{\text{dma\_buffer}[8] \times 3.3}{4095} \right)}{0.2475}$$
+$$\text{Battery Voltage} = \frac{\text{ADC Reading} \times 3.3}{4095 \times 0.2475}$$
 
 > [!TIP]
 > Reading the battery voltage on the 9th channel enables continuous, real-time voltage compensation for motor speeds in [`set_motor_speed`](file:///H:/Jaishnu/stm_workspace_2/line_follower/docs/motor.md#2-set_motor_speed).

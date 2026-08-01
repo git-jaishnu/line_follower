@@ -106,9 +106,11 @@ flowchart LR
    [`autoCalibrate`](docs/sensor_module.md#3-autocalibrate) spins the robot over the track to record independent `adc_min` and `adc_max` bounds for each individual sensor, compensating for manufacturing variations and height offsets.
 4. **Dual Line Position Algorithms**:
    - **Continuous Analog Mode** ([`get_line_error`](docs/sensor_module.md#6-get_line_error)):
-     $$\text{Position Error} = \frac{\sum (\text{mapped\_value}_i \times \text{weight}_i)}{\sum \text{mapped\_value}_i}$$
+     $$\text{Position Error} = \frac{\sum (v_i \times w_i)}{\sum v_i}$$
+     *(where $v_i$ is mapped analog intensity and $w_i$ is sensor weight)*
    - **Discrete Digital Mode** ([`get_line_error_digital`](docs/sensor_module.md#7-get_line_error_digital)):
-     $$\text{Position Error} = \frac{\sum_{\text{active}} \text{weight}_i}{\text{active\_sensors}}$$
+     $$\text{Position Error} = \frac{\sum_{\text{active}} w_i}{N_{\text{active}}}$$
+     *(where $w_i$ is active sensor weight and $N_{\text{active}}$ is total active sensors)*
 
 👉 *Read the full standalone [**Sensor Module Documentation (`docs/sensor_module.md`)**](docs/sensor_module.md) for deep-dive details.*
 

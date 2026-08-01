@@ -160,7 +160,8 @@ flowchart TD
 - **Parameters**: `sensor_array` - Pointer to `Sensor_Array`.
 - **Returns**: `float` - Continuous weighted line position error.
 - **Description**: Computes weighted analog center-of-gravity error:
-  $$\text{Error} = \frac{\sum_{i=0}^{N-1} (\text{mapped\_value}_i \times \text{weight}_i)}{\sum_{i=0}^{N-1} \text{mapped\_value}_i}$$
+  $$\text{Position Error} = \frac{\sum_{i=0}^{N-1} (v_i \times w_i)}{\sum_{i=0}^{N-1} v_i}$$
+  *(where $v_i$ is mapped analog intensity and $w_i$ is sensor weight)*
   - Returns `last_error` if line is completely lost (`adc_sum == 0`).
 
 ---
@@ -172,7 +173,8 @@ flowchart TD
 - **Parameters**: `sensor_array` - Pointer to `Sensor_Array`.
 - **Returns**: `int` - Discrete weighted digital position error.
 - **Description**: Computes line error using active binary sensor flags (`on == 1`):
-  $$\text{Position} = \frac{\sum_{\text{active}} \text{weight}_i}{\text{active\_sensors}}$$
+  $$\text{Digital Position Error} = \frac{\sum_{\text{active}} w_i}{N_{\text{active}}}$$
+  *(where $w_i$ is active sensor weight and $N_{\text{active}}$ is total active sensors)*
   - Retains `last_error` if no active sensors detect the line.
 
 ---
@@ -187,7 +189,7 @@ flowchart TD
   - `dt`: Time step in seconds.
 - **Returns**: `int` - Scaled steering correction term.
 - **Description**: Closed-loop PID controller calculation:
-  - **P**: $K_p \times \text{error}$
+  - **P**: $K_p \times e$ *(where $e$ is position error)*
   - **I**: Integral accumulator with anti-windup clamping to `[-limit, limit]`.
   - **D**: Derivative rate of error change relative to `dt`.
   - Clamps total output to $\pm\text{limit}$ and returns scaled integer correction (`output * 20`).

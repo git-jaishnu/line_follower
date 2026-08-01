@@ -105,8 +105,8 @@ The motor driver interfaces directly with GPIOB output pins and TIM1 PWM output 
   - `sensor_array`: Pointer to `Sensor_Array` instance containing `base_speed`.
 - **Description**:
   Applies differential steering:
-  $$\text{Left Speed} = \text{base\_speed} + \text{correction}$$
-  $$\text{Right Speed} = \text{base\_speed} - \text{correction}$$
+  $$\text{Left Speed} = \text{Base Speed} + \text{Correction}$$
+  $$\text{Right Speed} = \text{Base Speed} - \text{Correction}$$
   Calls `set_motor_speed` with current battery voltage read from `dma_buffer`.
 
 ---

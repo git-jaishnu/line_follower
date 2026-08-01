@@ -91,8 +91,8 @@ void processSensors(Sensor_Array *sensor_array) {
 				- sensor_array->array[i].adc_min) * 1000) / range;
 		norm = constrain_int(norm, 0, 1000);
 
-		if (sensor_array->array[i].adc_raw > 180) {
-			sensor_array->array[i].mapped_value = norm;
+		if (sensor_array->array[i].adc_raw > 1500) {
+			sensor_array->array[i].mapped_value = sensor_array->array[i].adc_raw;
 		} else {
 			sensor_array->array[i].mapped_value = 0;
 		}
@@ -182,7 +182,7 @@ int calculate_pid(PID_Controller *pid, int error, float dt) {
 	if (output < -pid->limit)
 		return (int) -pid->limit;
 
-	return (int) (output * 50);
+	return (int) (output*20);
 }
 
 int count_active_sensors(Sensor_Array *sensor_array) {
@@ -248,7 +248,7 @@ JunctionType detect_junction_digital(Sensor_Array *sensor_array) {
 		return RIGHT_JUNCTION;
 	}
 
-	if (sensor_count >= 5 && sensor_array->array[1].on == 1
+	if (sensor_count >= 4  && sensor_array->array[1].on == 1
 				&& sensor_array->array[6].on == 1) {
 			return T_JUNCTION;
 	}

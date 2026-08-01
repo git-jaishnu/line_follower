@@ -133,7 +133,7 @@ void swing_turn_right(Sensor_Array *sa, int speed) {
 		Sync_Sensors(sa);
 		processSensors(sa);
 		binarizeSensors(sa);
-		int count = count_active_sensors(sa);
+
 
 		if ((sa->array[2].on == 1 || sa->array[3].on == 1)) {
 			break;

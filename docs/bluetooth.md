@@ -18,16 +18,16 @@ This document explains the serial communication interface implemented in [`core/
 
 ```mermaid
 flowchart LR
-    subgraph External Controller
-        PY[Python PID Tuner / Mobile App]
+    subgraph "External Controller"
+        PY["Python PID Tuner / Mobile App"]
     end
 
-    subgraph Serial Link
+    subgraph "Serial Link"
         PY -->|ASCII Command String + \r\n| HC05[Bluetooth HC-05 / HC-06 Transceiver]
         HC05 -->|USART1 RX Interrupt| ISR[HAL_UART_RxCpltCallback main.c]
     end
 
-    subgraph Firmware Parser
+    subgraph "Firmware Parser"
         ISR --> PARSE[processBluetoothCommand bluetooth.c]
         PARSE -->|PID Gains| PID[PID_Controller: Kp, Ki, Kd]
         PARSE -->|Speed / Limits| SENSOR[Sensor_Array: base_speed, limit]

@@ -23,24 +23,24 @@ This document provides complete user guide documentation and architectural detai
 
 ## Overview
 
-[`pid_tuner.py`](file:///H:/Jaishnu/stm_workspace_2/line_follower/pid_tuner.py) functions as a real-time ground control station for the robot. Instead of reflashing firmware to adjust $K_p$, $K_i$, $K_d$, base speeds, or correction limits, engineers can tune parameters wirelessly over Bluetooth and instantly analyze the impact on error signals, correction outputs, and motor PWM.
+[`pid_tuner.py`](file:///H:/Jaishnu/stm_workspace_2/line_follower/pid_tuner.py) functions as a real-time ground control station for the robot. Instead of reflashing firmware to adjust Kp, Ki, Kd, base speeds, or correction limits, engineers can tune parameters wirelessly over Bluetooth and instantly analyze the impact on error signals, correction outputs, and motor PWM.
 
 ```mermaid
 flowchart LR
-    subgraph PC / Laptop
-        GUI[PID Tuner Dashboard\npid_tuner.py]
+    subgraph "PC / Laptop"
+        GUI["PID Tuner Dashboard (pid_tuner.py)"]
         GUI -->|Commands: PID, PARAM, START, STOP| SER_OUT[Serial TX]
         SER_IN[Serial RX] -->|Parse Telemetry Packets| GUI
     end
 
-    subgraph Communication Link
+    subgraph "Communication Link"
         SER_OUT -->|Bluetooth / USB-UART| BT_HW[HC-05 / HC-06 Transceiver]
         BT_HW -->|Bluetooth / USB-UART| SER_IN
     end
 
-    subgraph STM32 Firmware
-        BT_HW -->|USART1 RX Interrupt| RX_ISR[HAL_UART_RxCpltCallback\nmain.c]
-        TX_TEL[Send_Telemetry\nmain.c] -->|USART1 TX| BT_HW
+    subgraph "STM32 Firmware"
+        BT_HW -->|USART1 RX Interrupt| RX_ISR[HAL_UART_RxCpltCallback main.c]
+        TX_TEL[Send_Telemetry main.c] -->|USART1 TX| BT_HW
     end
 ```
 
@@ -82,15 +82,15 @@ python pid_tuner.py
 The **📊 PID Plots** tab features three real-time charts synchronized at ~60ms intervals:
 
 1. **Dual Y-Axis Line Error & PID Correction Chart** (Top Full-Width):
-   - **Cyan Line**: Real-time line position error ($e$).
-   - **Dashed White Line**: Target Setpoint ($0$).
+   - **Cyan Line**: Real-time line position error.
+   - **Dashed White Line**: Target Setpoint (0).
    - **Orange Line (Right Y-Axis)**: Calculated PID correction output.
 2. **Motor Speeds Chart** (Bottom Left):
    - **Blue Line**: Left motor PWM speed.
    - **Purple Line**: Right motor PWM speed.
 3. **Live IR Sensors Bar Chart** (Bottom Right):
-   - Dynamic bar chart showing raw 12-bit ADC values for each connected sensor ($0$ to $4095$).
-   - Bars automatically turn **Cyan** when over background, and **Red** when over the black line ($< 0.45 \times 4095$).
+   - Dynamic bar chart showing raw 12-bit ADC values for each connected sensor (0 to 4095).
+   - Bars automatically turn **Cyan** when over background, and **Red** when over the black line (< 0.45 × 4095).
    - If physical pin order is reversed, click **`⇄ Flip IR Order`** on the sidebar to flip the display orientation.
 
 ---
@@ -132,11 +132,11 @@ Click **`📖 PID Tuning Guide`** on the sidebar to launch an interactive window
 
 > [!TIP]
 > **Recommended Tuning Procedure**:
-> 1. **Step 0 — Reset**: Set $K_p = 0.5, K_i = 0.0, K_d = 0.0$.
-> 2. **Step 1 — Tune $K_p$**: Increase $K_p$ in steps of 0.5 until the robot follows the line but oscillates (zigzags), then back off ~20%.
-> 3. **Step 2 — Tune $K_d$**: Increase $K_d$ in steps of 0.2 to damp out oscillations without causing high-frequency spikes on the orange correction line.
-> 4. **Step 3 — Tune $K_i$**: Keep $K_i = 0.0$ or set a small value ($0.01 - 0.1$) only if steady-state position offset remains.
-> 5. **Step 4 — Base Speed & Limits**: Increase base speed and set PID Limit $\approx \text{Base Speed} \times 0.6$.
+> 1. **Step 0 — Reset**: Set Kp = 0.5, Ki = 0.0, Kd = 0.0.
+> 2. **Step 1 — Tune Kp**: Increase Kp in steps of 0.5 until the robot follows the line but oscillates (zigzags), then back off ~20%.
+> 3. **Step 2 — Tune Kd**: Increase Kd in steps of 0.2 to damp out oscillations without causing high-frequency spikes on the orange correction line.
+> 4. **Step 3 — Tune Ki**: Keep Ki = 0.0 or set a small value (0.01 - 0.1) only if steady-state position offset remains.
+> 5. **Step 4 — Base Speed & Limits**: Increase base speed and set PID Limit ≈ Base Speed × 0.6.
 
 ---
 
@@ -177,7 +177,7 @@ IR:120,140,3200,3100,150,130,120,110;PL:580;PR:420;BV:12.2;PE:4.0;PO:80.0;JC:0\n
 | `PL` | Left motor PWM speed | Plotted on Motor Speeds chart (Blue). |
 | `PR` | Right motor PWM speed | Plotted on Motor Speeds chart (Purple). |
 | `BV` | Battery voltage in Volts | Displayed in live sidebar & debug card. |
-| `PE` | Position error ($e$) | Plotted on Error/Correction chart (Cyan). |
+| `PE` | Position error | Plotted on Error/Correction chart (Cyan). |
 | `PO` | PID correction output | Plotted on Error/Correction chart (Orange). |
 | `JC` | Junction type enum index (`0..6`) | Displayed as readable string (`NONE`, `LEFT`, `RIGHT`, `T-JUNC`). |
 
@@ -223,8 +223,8 @@ Below is a map of the core Python methods in [`pid_tuner.py`](file:///H:/Jaishnu
 | `_build_plots()` | [`pid_tuner.py: L303`](file:///H:/Jaishnu/stm_workspace_2/line_follower/pid_tuner.py#L303) | Configures Matplotlib GridSpec layout for dual-axis error/correction, motor speeds, and IR bar chart. |
 | `_build_debug_tab()` | [`pid_tuner.py: L408`](file:///H:/Jaishnu/stm_workspace_2/line_follower/pid_tuner.py#L408) | Constructs raw DMA canvas, telemetry cards, binary sensor indicator bar, and packet log. |
 | `_reader()` | [`pid_tuner.py: L659`](file:///H:/Jaishnu/stm_workspace_2/line_follower/pid_tuner.py#L659) | Background thread continuously reading bytes from serial port and splitting lines. |
-| `_parse(line)` | [`pid_tuner.py: L678`](file:///H:/Jaishnu/stm_workspace_2/line_follower/pid_tuner.py#L678) | Parses key-value pairs from telemetry string into data deques (`err`, `corr`, `lspd`, `rspd`, `batt`). |
-| `_send_pid()` | [`pid_tuner.py: L782`](file:///H:/Jaishnu/stm_workspace_2/line_follower/pid_tuner.py#L782) | Reads $K_p, K_i, K_d$ from entries and transmits `"PID:p,i,d"`. |
+| `_parse(line)` | [`pid_tuner.py: L678`](file:///H:/Jaishnu/stm_workspace_2/line_follower/pid_tuner.py#L678) | Parses key-value pairs from telemetry string into data deques. |
+| `_send_pid()` | [`pid_tuner.py: L782`](file:///H:/Jaishnu/stm_workspace_2/line_follower/pid_tuner.py#L782) | Reads Kp, Ki, Kd from entries and transmits `"PID:p,i,d"`. |
 | `_send_params()` | [`pid_tuner.py: L789`](file:///H:/Jaishnu/stm_workspace_2/line_follower/pid_tuner.py#L789) | Reads base speed and PID limit and transmits `"PARAM:BS<bs>PL<pl>"`. |
 | `_show_guide()` | [`pid_tuner.py: L803`](file:///H:/Jaishnu/stm_workspace_2/line_follower/pid_tuner.py#L803) | Opens non-blocking Toplevel window with step-by-step PID tuning manual and diagnostic patterns. |
 | `_tick()` | [`pid_tuner.py: L1001`](file:///H:/Jaishnu/stm_workspace_2/line_follower/pid_tuner.py#L1001) | Main thread GUI update loop executed every ~60ms to refresh charts, debug canvas, and labels. |

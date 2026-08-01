@@ -16,7 +16,7 @@ Included in this repository is a custom desktop GUI application ([`pid_tuner.py`
 - **⚡ Zero-CPU-Overhead Sensor Acquisition**: Uses STM32 ADC1 in continuous multi-channel scan mode paired with DMA2 Stream 0 to transfer 12-bit sensor data into RAM asynchronously.
 - **🧱 Modular & Hardware-Agnostic Sensor Architecture**: The core sensor module ([`core/src/sensor_module.c`](core/src/sensor_module.c)) decouples physical array hardware from navigation math. Supports any IR array size (4, 6, 8, 12, 16 sensors), custom positional weights, dynamic per-sensor min/max auto-calibration, and analog or digital line-error algorithms.
 - **🔋 Battery Voltage Compensation**: Continuously measures battery voltage on a dedicated ADC channel and dynamically scales motor PWM duty cycles to maintain uniform speed as the battery depletes.
-- **🧭 Automatic Junction Detection & Maneuvers**: Pattern-matching classifiers detect $T$-junctions, $90^\circ$ left/right turns, and cross intersections, executing specialized turn routines.
+- **🧭 Automatic Junction Detection & Maneuvers**: Pattern-matching classifiers detect T-junctions, 90° left/right turns, and cross intersections, executing specialized turn routines.
 - **📊 Real-Time Python PID Dashboard**: Custom Tkinter/Matplotlib GUI ([`pid_tuner.py`](pid_tuner.py)) featuring dual Y-axis plots, live 12-bit IR bar charts, CSV recording/exporting, debug packet logging, and a built-in step-by-step PID tuning guide.
 
 ---
@@ -25,8 +25,8 @@ Included in this repository is a custom desktop GUI application ([`pid_tuner.py`
 
 ```mermaid
 flowchart TD
-    subgraph Hardware Layer
-        IR[IR Reflectance Sensor Bar\n4, 6, 8, or 16 Channels] -->|Analog Voltage| ADC[STM32 ADC1 Peripheral]
+    subgraph "Hardware Layer"
+        IR["IR Reflectance Sensor Bar (4, 6, 8, or 16 Channels)"] -->|Analog Voltage| ADC[STM32 ADC1 Peripheral]
         BATT[Battery Voltage Divider] -->|Sense Channel| ADC
         ADC -->|Zero-CPU DMA Transfer| DMA[DMA2 Stream 0]
         DMA -->|Circular Buffer| DMABUF[dma_buffer in RAM]
@@ -34,7 +34,7 @@ flowchart TD
         BT_HW[Bluetooth Transceiver HC-05/06] -->|USART1 RX Interrupt| UART_ISR[HAL_UART_RxCpltCallback]
     end
 
-    subgraph Firmware Engine (core/src)
+    subgraph "Firmware Engine (core/src)"
         DMABUF -->|Sync & Re-index| SYNC[Sync_Sensors]
         SYNC -->|Filter & Clamping| PROC[processSensors & binarizeSensors]
         PROC --> JUNC{Junction Detected?}
@@ -47,14 +47,14 @@ flowchart TD
         PID --> FOLLOW[follow_line]
     end
 
-    subgraph Ground Station & Telemetry
+    subgraph "Ground Station & Telemetry"
         UART_ISR -->|Parse Commands| PARSER[processBluetoothCommand]
         PARSER -->|Update Gains / Speeds| PID
         TELEM[Send_Telemetry] -->|USART1 TX| BT_HW
-        BT_HW -->|Wireless Telemetry Stream| DASH[Python PID Tuner GUI\npid_tuner.py]
+        BT_HW -->|Wireless Telemetry Stream| DASH["Python PID Tuner GUI (pid_tuner.py)"]
     end
 
-    subgraph Actuators
+    subgraph "Actuators"
         TURN --> PWM[TIM1 PWM CH1 & CH4 + GPIOB Pins]
         FOLLOW --> PWM
         PWM --> MOTORS[Dual H-Bridge DC Motors]
@@ -75,24 +75,24 @@ One of the standout features of this project is its **completely modular and har
 
 ```mermaid
 flowchart LR
-    subgraph Hardware Agnostic Layer
+    subgraph "Hardware Agnostic Layer"
         S1[Sensor Struct 0]
         S2[Sensor Struct 1]
         SN[Sensor Struct N-1]
     end
 
-    subgraph Sensor_Array Container Struct
+    subgraph "Sensor_Array Container Struct"
         ARRAY_PTR[*array Pointer] --> S1 & S2 & SN
         WEIGHTS_PTR[*weights Pointer] --> W[Custom Weights Array]
         COUNT[number_of_sensors = N]
     end
 
-    subgraph Dynamic Processing & Calibration
-        S1 & S2 & SN --> CALIB[autoCalibrate\nIndependent adc_min / adc_max per sensor]
-        CALIB --> NORM[processSensors\nDynamic Range Scaling & Clamping]
+    subgraph "Dynamic Processing & Calibration"
+        S1 & S2 & SN --> CALIB["autoCalibrate (Independent adc_min / adc_max per sensor)"]
+        CALIB --> NORM["processSensors (Dynamic Range Scaling & Clamping)"]
         NORM --> MATH{Choose Algorithm}
-        MATH -->|Analog COG| ANA[get_line_error\nSub-millimeter Continuous Error]
-        MATH -->|Digital Active| DIG[get_line_error_digital\nHigh-Speed Discrete Error]
+        MATH -->|Analog COG| ANA["get_line_error (Sub-millimeter Continuous Error)"]
+        MATH -->|Digital Active| DIG["get_line_error_digital (High-Speed Discrete Error)"]
     end
 ```
 
@@ -105,8 +105,10 @@ flowchart LR
 3. **Per-Sensor Independent Auto-Calibration**:
    [`autoCalibrate`](docs/sensor_module.md#3-autocalibrate) spins the robot over the track to record independent `adc_min` and `adc_max` bounds for each individual sensor, compensating for manufacturing variations and height offsets.
 4. **Dual Line Position Algorithms**:
-   - **Continuous Analog Mode** ([`get_line_error`](docs/sensor_module.md#6-get_line_error)): $\text{Error} = \frac{\sum (\text{mapped\_value}_i \times \text{weight}_i)}{\sum \text{mapped\_value}_i}$
-   - **Discrete Digital Mode** ([`get_line_error_digital`](docs/sensor_module.md#7-get_line_error_digital)): $\text{Position} = \frac{\sum_{\text{active}} \text{weight}_i}{\text{active\_sensors}}$
+   - **Continuous Analog Mode** ([`get_line_error`](docs/sensor_module.md#6-get_line_error)):
+     $$\text{Position Error} = \frac{\sum (\text{mapped\_value}_i \times \text{weight}_i)}{\sum \text{mapped\_value}_i}$$
+   - **Discrete Digital Mode** ([`get_line_error_digital`](docs/sensor_module.md#7-get_line_error_digital)):
+     $$\text{Position Error} = \frac{\sum_{\text{active}} \text{weight}_i}{\text{active\_sensors}}$$
 
 👉 *Read the full standalone [**Sensor Module Documentation (`docs/sensor_module.md`)**](docs/sensor_module.md) for deep-dive details.*
 
@@ -125,7 +127,7 @@ Follow this guide to build, wire, flash, and tune your own STM32 line follower r
 | **Motor Driver** | TB6612FNG / L298N Dual H-Bridge | Motor power control (PWM on TIM1 CH1 & CH4) |
 | **DC Motors** | N20 12V 600RPM Micro Gear Motors + Wheels | Drive actuators |
 | **Bluetooth Module** | HC-05 / HC-06 Transceiver | Wireless telemetry & tuning (USART1 9600 baud) |
-| **Battery & Voltage Divider** | 3S LiPo (11.1V–12.6V) + $10\text{k}\Omega / 3.3\text{k}\Omega$ Divider | Power supply & battery voltage sensing (ADC1 CH9) |
+| **Battery & Voltage Divider** | 3S LiPo (11.1V–12.6V) + 10kΩ / 3.3kΩ Divider | Power supply & battery voltage sensing (ADC1 CH9) |
 | **Push Button** | Momentary Push Button | User start/stop trigger (Connected to `PC14` EXTI) |
 
 ---

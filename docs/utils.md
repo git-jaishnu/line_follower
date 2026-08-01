@@ -20,16 +20,16 @@ The line follower measures main battery supply voltage via a resistive voltage d
 
 ```mermaid
 flowchart LR
-    BATT[Battery Pack ~12.4V] --> DIVIDER[Resistor Voltage Divider Ratio: 0.2475]
+    BATT["Battery Pack (~12.4V)"] --> DIVIDER["Resistor Voltage Divider (Ratio: 0.2475)"]
     DIVIDER --> ADC[STM32 ADC1 Channel 9]
     ADC --> DMA[dma_buffer Index 8]
     DMA --> MATH[battery_voltage Helper Function]
     MATH --> VOLTS[Actual Voltage in Volts]
 ```
 
-$$\text{Voltage} = \frac{\left( \frac{\text{dma\_buffer}[\text{NUM\_SENSORS}] \times 3.3\text{V}}{4095.0} \right)}{0.2475}$$
+$$\text{Voltage} = \frac{\left( \frac{\text{dma\_buffer}[\text{NUM\_SENSORS}] \times 3.3}{4095.0} \right)}{0.2475}$$
 
-- **`3.3V`**: STM32 analog reference voltage ($V_{\text{REF}}$).
+- **`3.3`**: STM32 analog reference voltage ($V_{\text{REF}} = 3.3\text{V}$).
 - **`4095.0`**: 12-bit ADC maximum digital resolution ($2^{12} - 1$).
 - **`0.2475`**: Resistor voltage divider attenuation factor ($\frac{R_2}{R_1 + R_2}$).
 

@@ -24,14 +24,14 @@ This document provides complete technical documentation for [`core/src/motor.c`]
 
 ```mermaid
 flowchart TD
-    subgraph Motor Speed Calculation
+    subgraph "Motor Speed Calculation"
         STEER[PID Steering Correction] --> DIFF[follow_line: Base Speed ± Correction]
         BATT[Battery Voltage Measurement] --> COMP[set_motor_speed Voltage Scaling]
         DIFF --> COMP
     end
 
-    subgraph Hardware Signal Output
-        COMP -->|Clamping [-999, 999]| CLAMP[Speed Values]
+    subgraph "Hardware Signal Output"
+        COMP -->|Clamping -999 to 999| CLAMP[Speed Values]
         CLAMP -->|Direction Checks| DIR{Speed Sign}
         
         DIR -->|Speed > 0 (Forward)| FWD[Set IN1=1, IN2=0, TIM1 PWM = Speed]
@@ -52,11 +52,11 @@ flowchart TD
 > [!TIP]
 > **Why Battery Voltage Compensation Matters**: As lithium-ion or LiPo battery packs discharge, supply voltage drops from ~12.4V down to 10V or lower. Without compensation, motor speeds degrade, throwing off calibrated PID gains.
 
-The motor driver normalizes motor speeds relative to a fixed reference voltage ($12.4\text{V}$):
+The motor driver normalizes motor speeds relative to a fixed reference voltage (12.4V):
 
-$$\text{Speed}_{\text{compensated}} = \text{constrain}\left( \text{Speed}_{\text{target}} \times \frac{12.4\text{V}}{V_{\text{battery}}}, -999, 999 \right)$$
+$$\text{Speed}_{\text{compensated}} = \text{constrain}\left( \text{Speed}_{\text{target}} \times \frac{12.4}{V_{\text{battery}}}, -999, 999 \right)$$
 
-If the measured battery voltage drops below $1.0\text{V}$ (e.g., during initialization or sensor disconnect), a safe fallback nominal value of $12.4\text{V}$ is automatically used.
+If the measured battery voltage drops below 1.0V (e.g., during initialization or sensor disconnect), a safe fallback nominal value of 12.4V is automatically used.
 
 ---
 

@@ -53,11 +53,11 @@ This document provides complete technical documentation for [`core/src/sensor_mo
 
 ```mermaid
 flowchart TD
-    subgraph Hardware DMA Layer
+    subgraph "Hardware DMA Layer"
         DMA[DMA Buffer dma_buffer] -->|Raw 12-Bit ADC| SYNC[Sync_Sensors]
     end
 
-    subgraph Modular Processing Pipeline
+    subgraph "Modular Processing Pipeline"
         SYNC -->|Re-index Pin Order| RAW[adc_raw per Sensor]
         RAW --> PROC[processSensors]
         PROC -->|Dynamic Normalization & Noise Clamping| MAPPED[mapped_value: 0-4095]
@@ -65,7 +65,7 @@ flowchart TD
         BIN -->|Threshold Comparison| DIGITAL[on flag: 0 or 1]
     end
 
-    subgraph Navigation & Control Outputs
+    subgraph "Navigation & Control Outputs"
         MAPPED -->|Analog Weighted Sum| ERR_ANA[get_line_error]
         DIGITAL -->|Digital Weighted Sum| ERR_DIG[get_line_error_digital]
         DIGITAL -->|Pattern Recognition| JUNC[detect_junction / detect_junction_digital]

@@ -30,7 +30,7 @@ This document provides an in-depth breakdown of the main line-following executio
 
 ```mermaid
 flowchart TD
-    subgraph Hardware Peripherals
+    subgraph "Hardware Peripherals"
         IR[8-Channel IR Array + Battery Sense] -->|Continuous Scan| ADC1[STM32 ADC1 Peripheral]
         ADC1 -->|Zero CPU DMA Transfer| DMA[DMA2 Stream 0]
         DMA -->|Circular Buffer| DMABUF[dma_buffer in RAM]
@@ -38,7 +38,7 @@ flowchart TD
         BTN[Push Button PC14] -->|EXTI Interrupt| EXTI[EXTI ISR]
     end
 
-    subgraph Core System Software
+    subgraph "Core System Software"
         DMABUF -->|Sync & Reorder| SYNC[Sync_Sensors]
         SYNC -->|Filter & Clamping| PROC[processSensors & binarizeSensors]
         PROC --> JUNC{Junction Detected?}
@@ -51,7 +51,7 @@ flowchart TD
         PID --> FOLLOW[follow_line]
     end
 
-    subgraph Actuators
+    subgraph "Actuators"
         TURN --> PWM[TIM1 PWM CH1 & CH4 + GPIOB Pins]
         FOLLOW --> PWM
         PWM --> MOTORS[Dual H-Bridge DC Motors]
@@ -70,7 +70,7 @@ The line follower relies on continuous multi-channel sampling without blocking t
 - **Direct Memory Access (DMA2 Stream 0)**: When an ADC conversion completes, the DMA controller automatically moves the 12-bit conversion value from the `ADC1->DR` data register into the target array [`dma_buffer`](file:///H:/Jaishnu/stm_workspace_2/line_follower/core/src/sensor_module.c#L13) in RAM.
 - **Efficiency Impact**: The CPU never executes wait loops or blocking reads for ADC conversions. When the main loop runs [`Sync_Sensors(&sensor_array)`](file:///H:/Jaishnu/stm_workspace_2/line_follower/docs/sensor_module.md#2-sync_sensors), fresh 12-bit sensor data is already present in RAM.
 
-$$\text{Battery Voltage} = \frac{\left( \frac{\text{dma\_buffer}[8] \times 3.3\text{V}}{4095} \right)}{0.2475}$$
+$$\text{Battery Voltage} = \frac{\left( \frac{\text{dma\_buffer}[8] \times 3.3}{4095} \right)}{0.2475}$$
 
 > [!TIP]
 > Reading the battery voltage on the 9th channel enables continuous, real-time voltage compensation for motor speeds in [`set_motor_speed`](file:///H:/Jaishnu/stm_workspace_2/line_follower/docs/motor.md#2-set_motor_speed).
@@ -81,7 +81,7 @@ $$\text{Battery Voltage} = \frac{\left( \frac{\text{dma\_buffer}[8] \times 3.3\t
 
 - **PWM Generation (TIM1)**: Timer 1 generates high-frequency PWM signals on `Channel 1` (Left Motor Speed) and `Channel 4` (Right Motor Speed) with a period register of `1000`.
 - **Direction Control (GPIOB)**: H-Bridge direction pins (`PB12`, `PB13`, `PB14`, `PB15`) govern forward, reverse, and braking states.
-- **Battery Compensation**: As the battery depletes from $12.4\text{V}$, motor torque and speed naturally decay. The system calculates a scaling multiplier ($\frac{12.4\text{V}}{V_{\text{battery}}}$) in [`utils.c`](file:///H:/Jaishnu/stm_workspace_2/line_follower/docs/utils.md#3-battery_voltage) and adjusts PWM compare values dynamically, guaranteeing uniform velocity across battery discharge cycles.
+- **Battery Compensation**: As the battery depletes from 12.4V, motor torque and speed naturally decay. The system calculates a scaling multiplier ($\frac{12.4}{V_{\text{battery}}}$) in [`utils.c`](file:///H:/Jaishnu/stm_workspace_2/line_follower/docs/utils.md#3-battery_voltage) and adjusts PWM compare values dynamically, guaranteeing uniform velocity across battery discharge cycles.
 
 ---
 

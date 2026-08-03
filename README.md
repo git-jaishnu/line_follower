@@ -1,18 +1,35 @@
-# ⚡ High-Speed STM32 Line Follower Robot with Real-Time Python PID Tuner
+# ⚡ High-Speed STM32 Line Follower Robot with Real-Time Python PID Tuner & Modular PCB Platform
 
 [![STM32 Architecture](https://img.shields.io/badge/Microcontroller-STM32F4-00599C?logo=stmicroelectronics&logoColor=white)](https://www.st.com/)
 [![Language](https://img.shields.io/badge/Language-C%20%2F%20Python-00599C?logo=c&logoColor=white)](https://en.wikipedia.org/wiki/C_(programming_language))
 [![GUI Dashboard](https://img.shields.io/badge/GUI-Tkinter%20%2B%20Matplotlib-ff69b4?logo=python&logoColor=white)](pid_tuner.py)
+[![Modular Hardware](https://img.shields.io/badge/Hardware-KiCad%20Modular%20PCB-410093?logo=kicad&logoColor=white)](README.md)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-An advanced, high-speed line follower robot platform engineered on the **STM32F4** ARM Cortex-M4 microcontroller. This system features **zero-CPU-overhead continuous ADC sampling via DMA**, **closed-loop PID steering control with dynamic time-delta computation**, **real-time battery voltage compensation**, and a **hardware-agnostic, modular sensor processing module**. 
+An advanced, high-speed line follower robot platform engineered on the **STM32F4** ARM Cortex-M4 microcontroller and a **custom modular hardware architecture**. This system features **zero-CPU-overhead continuous ADC sampling via DMA**, **closed-loop PID steering control with dynamic time-delta computation**, **real-time battery voltage compensation**, and a **hardware-agnostic, modular sensor processing engine** paired with interchangeable custom PCB sensor arrays. 
 
 Included in this repository is a custom desktop GUI application ([`pid_tuner.py`](pid_tuner.py)) that streams real-time telemetry over Bluetooth/UART, plots line error, correction outputs, and motor speeds at ~60ms intervals, and allows live gain tuning without reflashing firmware.
 
 ---
 
-## 📑 Detailed Module Documentation Links
+## 🖼️ Hardware & Bot Gallery
 
+> [!TIP]
+> Place your actual photo of the robot and 3D KiCad render in the `images/` directory as `images/bot_photo.png` and `images/pcb_3d_render.png`.
+
+| 🤖 Complete Robot Picture | 🛠️ Main Control PCB |
+| :---: | :---: |
+| ![Robot Photo](images/bot_photo.png) <br> *(Add your bot picture at `images/bot_photo.png`)* | ![Main Control PCB](images/BodyPCB.png) <br> *Main Control & Power Board* |
+
+| 📐 MCU & Control Schematic | 🧊 3D PCB Viewer Render |
+| :---: | :---: |
+| ![MCU Schematic](images/MCU_schematic.png) <br> *MCU Control Schematic* | ![3D PCB Viewer Render](images/pcb_3d_render.png) <br> *(Add your 3D viewer render at `images/pcb_3d_render.png`)* |
+
+---
+
+## 📑 Detailed Module & Hardware Documentation Links
+
+- 🛠️ [**Modular PCB Hardware & Sensor System Documentation**](#-modular-pcb-hardware-architecture)
 - 📊 [**Modular Sensor Module Architecture (`docs/sensor_module.md`)**](docs/sensor_module.md)
 - 📡 [**Main System Architecture & Control Loop Logic (`docs/main.md`)**](docs/main.md)
 - ⚡ [**Motor Control & Battery Voltage Compensation (`docs/motor.md`)**](docs/motor.md)
@@ -21,14 +38,13 @@ Included in this repository is a custom desktop GUI application ([`pid_tuner.py`
 - 🛠️ [**Utility Helpers & Voltage Conversion Math (`docs/utils.md`)**](docs/utils.md)
 - 📚 [**Documentation Index (`docs/README.md`)**](docs/README.md)
 
-
-
 ---
 
 ## 🌟 Key Features & Highlights
 
 - **⚡ Zero-CPU-Overhead Sensor Acquisition**: Uses STM32 ADC1 in continuous multi-channel scan mode paired with DMA2 Stream 0 to transfer 12-bit sensor data into RAM asynchronously.
 - **🧱 Modular & Hardware-Agnostic Sensor Architecture**: The core sensor module ([`core/src/sensor_module.c`](core/src/sensor_module.c)) decouples physical array hardware from navigation math. Supports any IR array size (4, 6, 8, 12, 16 sensors), custom positional weights, dynamic per-sensor min/max auto-calibration, and analog or digital line-error algorithms.
+- **🎛️ 4 Interchangeable Sensor Array PCBs**: Common header interface supporting 16-sensor curved QRE arrays, 9-sensor QRE straight arrays, 9-sensor TCRT5000 arrays, and discrete IR LED/phototransistor arrays.
 - **🔋 Battery Voltage Compensation**: Continuously measures battery voltage on a dedicated ADC channel and dynamically scales motor PWM duty cycles to maintain uniform speed as the battery depletes.
 - **🧭 Automatic Junction Detection & Maneuvers**: Pattern-matching classifiers detect T-junctions, 90° left/right turns, and cross intersections, executing specialized turn routines.
 - **📊 Real-Time Python PID Dashboard**: Custom Tkinter/Matplotlib GUI ([`pid_tuner.py`](pid_tuner.py)) featuring dual Y-axis plots, live 12-bit IR bar charts, CSV recording/exporting, debug packet logging, and a built-in step-by-step PID tuning guide.
@@ -39,7 +55,7 @@ Included in this repository is a custom desktop GUI application ([`pid_tuner.py`
 
 ```mermaid
 flowchart TD
-    subgraph "Hardware Layer"
+    subgraph "Hardware & PCB Layer"
         IR["IR Reflectance Sensor Bar (4, 6, 8, or 16 Channels)"] -->|Analog Voltage| ADC[STM32 ADC1 Peripheral]
         BATT[Battery Voltage Divider] -->|Sense Channel| ADC
         ADC -->|Zero-CPU DMA Transfer| DMA[DMA2 Stream 0]
@@ -74,6 +90,84 @@ flowchart TD
         PWM --> MOTORS[Dual H-Bridge DC Motors]
     end
 ```
+
+---
+
+## 🛠️ Modular PCB Hardware Architecture
+
+The robot is built on a custom modular PCB platform designed to prioritize sensor experimentation and component flexibility. Instead of committing to a single sensor layout, this board allows four distinct sensor array designs to be used interchangeably without redesigning the core electronics.
+
+### Core Hardware Components & Design Choices
+
+#### 🧠 Microcontroller — STM32F411 (Blackpill) <img alt="Badge" src="https://img.shields.io/badge/STM32F411-FF7D9E">
+- High-speed multi-channel ADC for ultra-fast sensor sampling
+- Rich GPIO availability and timer hardware for motor PWM
+- Plug-in module form factor for rapid replacement
+
+#### ⚡ Motor Driver — TB6612FNG <img alt="Badge" src="https://img.shields.io/badge/TB6612FNG-FF78E4">
+- Dual H-Bridge DC motor driver
+- Superior thermal efficiency and compact footprint for micro N20 motors
+
+#### 🔋 Voltage Regulation — MP1584 Buck Converter <img alt="Badge" src="https://img.shields.io/badge/MP1584-E979FC">
+- Step-down buck regulator delivering a stable 3.3V power rail to MCU & optical sensors
+- High efficiency for extended LiPo battery operation
+
+#### 📶 Communication — HC-05 Bluetooth Module <img alt="Badge" src="https://img.shields.io/badge/HC05%20-BB5CF2">
+- UART-based serial Bluetooth transceiver
+- Enables wireless real-time telemetry streaming and remote PID gain tuning
+- Supports hardware `STATE` and `EN` pin control
+
+#### 🔀 Analog Multiplexer — 74HC4067 <img alt="Badge" src="https://img.shields.io/badge/74HC4067%20-761AD9">
+- 16-channel analog MUX integrated into the high-density sensor bar
+- Expands sensor capacity while minimizing MCU pin requirements
+
+---
+
+### 🔌 Interchangeable Sensor Array PCBs
+
+All array PCBs share a standardized header connector interface, making them plug-and-play compatible with the main control PCB.
+
+| Sensor Array Design | PCB Layout Preview | Key Specifications & Use Cases |
+| :--- | :---: | :--- |
+| **1. 16-Sensor Curved Array (QRE1113 + MUX)** | <img src="images/16_QRE_PCB.png" width="350"> | • High-resolution optical tracking<br>• Multiplexed via 74HC4067<br>• Curved geometry designed for aggressive tight turns |
+| **2. 9-Sensor Straight Array (QRE1113)** | <img src="images/9_QRE_PCB.png" width="350"> | • Direct MCU ADC inputs<br>• Minimum latency & zero CPU multiplexing overhead<br>• Ideal for high-speed straightaways |
+| **3. 9-Sensor Curved Array (TCRT5000)** | <img src="images/9_TCRT_PCB.png" width="350"> | • High surface and ride-height tolerance<br>• Larger optical focal distance<br>• Forward-slight arc improves line re-acquisition |
+| **4. Custom Sensor Array (IR LED + PT334 6C)** | <img src="images/9_Custom_PCB.png" width="350"> | • Discrete phototransistor design<br>• Fully customizable gain resistors & optical spectrum tuning |
+
+---
+
+### 🎯 8+1 Sensor Placement Strategy
+
+- **8 Main Track Sensors**: Positioned across the primary line axis for continuous line position calculation and steering feedback.
+- **+1 Front Outrigger Sensor**: Mounted ahead of the main array to detect track overshoot, sharp right-angle turns, and cross junctions early, allowing predictive motor braking.
+
+---
+
+### 🎛️ Main Control PCB & Chassis Design
+
+The main board manages system power distribution, MCU signals, motor drivers, and chassis integration:
+
+- **Component Integration**: Hosts the STM32F411 Blackpill, TB6612FNG driver, MP1584 converter, and HC-05 Bluetooth module.
+- **Noise Isolation**: Logic and motor power grounds are isolated with decoupling capacitors to prevent inductive switching noise on analog ADC channels.
+- **Dual Physical Safety Switches**:
+  - **Motor Kill Switch**: Instantly cuts motor power while preserving MCU logic & telemetry for safe desktop debugging.
+  - **Battery Switch**: Complete power isolation.
+- **Debounced User Controls**: 2 hardware-debounced RC push buttons for starting, stopping, and triggering dynamic auto-calibration routines.
+- **Stacked PCB Chassis System**: Mounts directly to the upper chassis frame using standoffs, creating an internal battery bay between layers.
+
+<div align="center">
+  <img src="images/BodyPCB.png" width="520" alt="Main Control PCB Render"><br>
+  <sub><b>Main Control PCB Board Layout</b></sub>
+</div>
+
+---
+
+### 📐 Control Schematic
+
+<div align="center">
+  <img src="images/MCU_schematic.png" width="650" alt="MCU Control Schematic"><br>
+  <sub><b>MCU Control & Interfacing Schematic</b></sub>
+</div>
 
 ---
 
@@ -139,12 +233,12 @@ Follow this guide to build, wire, flash, and tune your own STM32 line follower r
 | Component | Recommended Part | Function |
 | :--- | :--- | :--- |
 | **Microcontroller** | STM32F401RE / STM32F411CE Black Pill / Nucleo | Main processing MCU |
-| **IR Sensor Bar** | Pololu QTR-8A / TCRT5000 8-Channel Array | Line detection (Connected to ADC1 CH0–CH7) |
-| **Motor Driver** | TB6612FNG / L298N Dual H-Bridge | Motor power control (PWM on TIM1 CH1 & CH4) |
-| **DC Motors** | N20 12V 600RPM Micro Gear Motors + Wheels | Drive actuators |
+| **IR Sensor Bar** | Modular PCB Array (16-QRE / 9-QRE / 9-TCRT / Custom) | Line detection (Connected to ADC1 CH0–CH7 or via MUX) |
+| **Motor Driver** | TB6612FNG Dual H-Bridge Module | Motor power control (PWM on TIM1 CH1 & CH4) |
+| **DC Motors** | N20 12V 600RPM Micro Gear Motors + High-Grip Wheels | Drive actuators |
 | **Bluetooth Module** | HC-05 / HC-06 Transceiver | Wireless telemetry & tuning (USART1 9600 baud) |
 | **Battery & Voltage Divider** | 3S LiPo (11.1V–12.6V) + 10kΩ / 3.3kΩ Divider | Power supply & battery voltage sensing (ADC1 CH9) |
-| **Push Button** | Momentary Push Button | User start/stop trigger (Connected to `PC14` EXTI) |
+| **Push Buttons** | 2x Tactile Push Buttons | Control triggers & calibration (Connected to `PC14` EXTI) |
 
 ---
 
@@ -213,9 +307,16 @@ Below is the complete project sitemap. Click any link to access detailed module 
 
 ```text
 line_follower/
-├── README.md                          <-- You are here (Repository Guide)
+├── README.md                          <-- You are here (Comprehensive Project & PCB Guide)
 ├── pid_tuner.py                       <-- Real-time Python GUI Tuning Dashboard
-├── docs/                              <-- Technical Documentation Folder
+├── images/                            <-- Hardware Images, Schematics & Renders
+│   ├── BodyPCB.png                    <-- Main Control PCB Layout
+│   ├── MCU_schematic.png              <-- System Schematic
+│   ├── 16_QRE_PCB.png                 <-- 16-Sensor Curved Array
+│   ├── 9_QRE_PCB.png                  <-- 9-Sensor Straight Array
+│   ├── 9_TCRT_PCB.png                 <-- 9-Sensor TCRT5000 Array
+│   └── 9_Custom_PCB.png               <-- Custom Phototransistor Array
+├── docs/                              <-- Technical Firmware Documentation
 │   ├── README.md                      <-- Documentation Index
 │   ├── main.md                        <-- System Architecture & Main Loop Logic
 │   ├── sensor_module.md               <-- Modular Sensor Architecture & Math
@@ -241,19 +342,25 @@ line_follower/
 
 ---
 
+## 🔬 Hardware Design Considerations & Lessons Learned
 
-### Future Improvements:
-
-1. **Lighter Body**: Heavy body due to it being PCB created a speed bottleneck.
-2. **Smaller Battery**: High mAh not required for competitions.
-3. **Suction Technology** : Using a fan to increase downforce.
-4. **Better Wheels** : To improve turning.
-5. **Better Isolation/Protection** : Prevent component damage.
-6. **Better Array Design**
+- **Tradeoff between Sensor Resolution and Sampling Speed**: High-density 16-sensor arrays using multiplexers (74HC4067) provide finer spatial resolution for sharp curves, whereas direct ADC 8/9-sensor arrays offer absolute minimal sampling latency for maximum speed.
+- **Power Isolation**: Separating logic power and motor power rails (along with strategic decoupling capacitors) prevents inductive motor switching noise from bleeding into high-resolution 12-bit ADC sensor readings.
+- **Modular Sensor Interface**: Designing standardized connector pinouts across all sensor arrays allows rapid hardware iteration without refactoring firmware pin definitions.
+- **Off-the-Shelf Module Integration**: Utilizing modular daughterboards (Blackpill MCU, TB6612 driver, MP1584 buck converter) ensures high reliability, ease of repair, and quick component swapping.
 
 ---
 
+## 🚀 Future Improvements
 
+1. **Lighter Body Chassis**: Optimizing PCB copper layer thickness and cutouts to reduce overall robot weight and rotational inertia.
+2. **Smaller Battery**: Transitioning to compact micro LiPo packs optimized specifically for competition heat run durations.
+3. **Suction Downforce Technology**: Implementing an integrated ducted fan downforce system to increase cornering grip without adding static mass.
+4. **Improved Wheel Traction**: Custom silicone-molded tires for superior cornering acceleration.
+5. **Enhanced Circuit Protection**: Adding TVS diodes and reverse polarity protection on main power inputs.
+6. **Onboard Sensor LEDs**: Placing SMD diagnostic LEDs directly on sensor array PCBs for instant visual confirmation of line state during bench testing.
+
+---
 
 ## 📜 License
 

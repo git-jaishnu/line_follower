@@ -1,7 +1,0 @@
-../Core/Src/motor.c:14:9:nonBlockingDelay	16	static
-../Core/Src/motor.c:31:6:set_motor_speed	32	static
-../Core/Src/motor.c:86:6:follow_line	24	static
-../Core/Src/motor.c:94:6:swing_turn_left	24	static
-../Core/Src/motor.c:123:6:swing_turn_right	24	static
-../Core/Src/motor.c:151:6:shoot_through	16	static
-../Core/Src/motor.c:173:6:handle_junction	24	static

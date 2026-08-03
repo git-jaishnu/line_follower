@@ -1,2 +1,140 @@
-.aider*
-.env
+# ==============================================================================
+# Comprehensive .gitignore for STM32 Line Follower & KiCad PCB Project
+# Repository: https://github.com/git-jaishnu/line_follower/tree/pcb-version
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. KiCad EDA Files & Temporary Artifacts
+# ------------------------------------------------------------------------------
+# Backup directories and auto-save files
+*-backups/
+*-backup/
+*_autosave*
+_autosave-*
+#auto_saved_files#
+
+# KiCad backup & lock files
+*.kicad_sch-bak
+*.kicad_pcb-bak
+*.kicad_sch.lck
+*.kicad_pcb.lck
+*.kicad_pro.lck
+*.lck
+~*.lck
+~*
+
+# KiCad local user settings & caches (view state, color themes, window sizes)
+*.kicad_prl
+fp-info-cache
+fp-single-cache
+sym-lib-table.bak
+fp-lib-table.bak
+
+# DRC / ERC reports & Netlists
+*.rpt
+*.drc
+*.erc
+*.net
+*.xml
+
+# Generated Gerber / Manufacturing plot outputs (Uncomment if you store Gerbers in ZIPs)
+# gerber/
+# plots/
+# gbr/
+# *.gbr
+# *.drl
+
+# ------------------------------------------------------------------------------
+# 2. STM32 Embedded Firmware & C/C++ Build Outputs
+# ------------------------------------------------------------------------------
+# Build directories (STM32CubeIDE, Keil, Make, CMake)
+[Dd]ebug/
+[Rr]elease/
+build/
+bin/
+obj/
+out/
+
+# Compiled binaries, object files, and symbols
+*.elf
+*.bin
+*.hex
+*.o
+*.obj
+*.d
+*.su
+*.map
+*.lst
+*.i
+*.s
+
+# STM32CubeIDE & Eclipse Project User Local Settings
+.settings/
+*.launch
+
+# ------------------------------------------------------------------------------
+# 3. Python Environment & Cache (for pid_tuner.py)
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+
+# ------------------------------------------------------------------------------
+# 4. Editors, IDEs & Extension Artifacts
+# ------------------------------------------------------------------------------
+# VS Code local history extension & workspace settings
+.history/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# JetBrains IDEs (CLION, PyCharm)
+.idea/
+
+# Keil uVision
+*.uvopt
+*.uvoptx
+*.uvproj
+*.uvprojx
+
+# ------------------------------------------------------------------------------
+# 5. OS & System Junk Files
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+*.tmp
+*.bak
+*.swp
+*.swo

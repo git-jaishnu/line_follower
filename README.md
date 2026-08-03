@@ -14,22 +14,19 @@ Included in this repository is a custom desktop GUI application ([`pid_tuner.py`
 
 ## 🖼️ Hardware & Bot Gallery
 
-> [!TIP]
-> Place your actual photo of the robot and 3D KiCad render in the `images/` directory as `images/bot_photo.png` and `images/pcb_3d_render.png`.
-
 | 🤖 Complete Robot Picture | 🛠️ Main Control PCB |
 | :---: | :---: |
-| ![Robot Photo](images/bot_photo.png) <br> *(Add your bot picture at `images/bot_photo.png`)* | ![Main Control PCB](images/BodyPCB.png) <br> *Main Control & Power Board* |
+| ![Robot Photo](images/bot_photo.png) <br> | ![Main Control PCB](images/BodyPCB.png) <br> *Main Control & Power Board* |
 
 | 📐 MCU & Control Schematic | 🧊 3D PCB Viewer Render |
 | :---: | :---: |
-| ![MCU Schematic](images/MCU_schematic.png) <br> *MCU Control Schematic* | ![3D PCB Viewer Render](images/pcb_3d_render.png) <br> *(Add your 3D viewer render at `images/pcb_3d_render.png`)* |
+| ![MCU Schematic](images/MCU_schematic.JPG) <br> | ![3D PCB Viewer Render](images/pcb_3d_render.png) <br> |
 
 ---
 
 ## 📑 Detailed Module & Hardware Documentation Links
 
-- 🛠️ [**Modular PCB Hardware & Sensor System Documentation**](#-modular-pcb-hardware-architecture)
+- 🛠️ [**Modular PCB Hardware Architecture**](https://github.com/alientanya/line-follower-PCB)
 - 📊 [**Modular Sensor Module Architecture (`docs/sensor_module.md`)**](docs/sensor_module.md)
 - 📡 [**Main System Architecture & Control Loop Logic (`docs/main.md`)**](docs/main.md)
 - ⚡ [**Motor Control & Battery Voltage Compensation (`docs/motor.md`)**](docs/motor.md)
@@ -127,12 +124,12 @@ The robot is built on a custom modular PCB platform designed to prioritize senso
 
 All array PCBs share a standardized header connector interface, making them plug-and-play compatible with the main control PCB.
 
-| Sensor Array Design | PCB Layout Preview | Key Specifications & Use Cases |
-| :--- | :---: | :--- |
-| **1. 16-Sensor Curved Array (QRE1113 + MUX)** | <img src="images/16_QRE_PCB.png" width="350"> | • High-resolution optical tracking<br>• Multiplexed via 74HC4067<br>• Curved geometry designed for aggressive tight turns |
-| **2. 9-Sensor Straight Array (QRE1113)** | <img src="images/9_QRE_PCB.png" width="350"> | • Direct MCU ADC inputs<br>• Minimum latency & zero CPU multiplexing overhead<br>• Ideal for high-speed straightaways |
-| **3. 9-Sensor Curved Array (TCRT5000)** | <img src="images/9_TCRT_PCB.png" width="350"> | • High surface and ride-height tolerance<br>• Larger optical focal distance<br>• Forward-slight arc improves line re-acquisition |
-| **4. Custom Sensor Array (IR LED + PT334 6C)** | <img src="images/9_Custom_PCB.png" width="350"> | • Discrete phototransistor design<br>• Fully customizable gain resistors & optical spectrum tuning |
+| Sensor Array Design | Key Specifications & Use Cases |
+| :--- | :--- |
+| **1. 16-Sensor Curved Array (QRE1113 + MUX)** | • High-resolution optical tracking<br>• Multiplexed via 74HC4067<br>• Curved geometry designed for aggressive tight turns |
+| **2. 9-Sensor Straight Array (QRE1113)** | • Direct MCU ADC inputs<br>• Minimum latency & zero CPU multiplexing overhead<br>• Ideal for high-speed straightaways |
+| **3. 9-Sensor Curved Array (TCRT5000)** | • High surface and ride-height tolerance<br>• Larger optical focal distance<br>• Forward-slight arc improves line re-acquisition |
+| **4. Custom Sensor Array (IR LED + PT334 6C)** | • Discrete phototransistor design<br>• Fully customizable gain resistors & optical spectrum tuning |
 
 ---
 
@@ -165,7 +162,7 @@ The main board manages system power distribution, MCU signals, motor drivers, an
 ### 📐 Control Schematic
 
 <div align="center">
-  <img src="images/MCU_schematic.png" width="650" alt="MCU Control Schematic"><br>
+  <img src="images/MCU_schematic.JPG" width="650" alt="MCU Control Schematic"><br>
   <sub><b>MCU Control & Interfacing Schematic</b></sub>
 </div>
 

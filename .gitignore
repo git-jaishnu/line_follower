@@ -4,7 +4,21 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1. KiCad EDA Files & Temporary Artifacts
+# 1. STM32CubeIDE & Eclipse Project Files & Metadata
+# ------------------------------------------------------------------------------
+.project
+.cproject
+.mxproject
+.settings/
+.metadata/
+*.launch
+*.cfg
+
+# CLI & Tool Junk Directories
+--mcp-server*
+
+# ------------------------------------------------------------------------------
+# 2. KiCad EDA Files & Temporary Artifacts
 # ------------------------------------------------------------------------------
 # Backup directories and auto-save files
 *-backups/
@@ -37,15 +51,8 @@ fp-lib-table.bak
 *.net
 *.xml
 
-# Generated Gerber / Manufacturing plot outputs (Uncomment if you store Gerbers in ZIPs)
-# gerber/
-# plots/
-# gbr/
-# *.gbr
-# *.drl
-
 # ------------------------------------------------------------------------------
-# 2. STM32 Embedded Firmware & C/C++ Build Outputs
+# 3. STM32 Embedded Firmware & C/C++ Build Outputs
 # ------------------------------------------------------------------------------
 # Build directories (STM32CubeIDE, Keil, Make, CMake)
 [Dd]ebug/
@@ -66,14 +73,14 @@ out/
 *.map
 *.lst
 *.i
-*.s
 
-# STM32CubeIDE & Eclipse Project User Local Settings
-.settings/
-*.launch
+# Ignore generated assembly files but preserve source startup assembly files
+*.s
+!Core/Startup/*.s
+!**/startup_*.s
 
 # ------------------------------------------------------------------------------
-# 3. Python Environment & Cache (for pid_tuner.py)
+# 4. Python Environment & Cache (for pid_tuner.py)
 # ------------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
@@ -103,7 +110,7 @@ wheels/
 .coverage
 
 # ------------------------------------------------------------------------------
-# 4. Editors, IDEs & Extension Artifacts
+# 5. Editors, IDEs & Extension Artifacts
 # ------------------------------------------------------------------------------
 # VS Code local history extension & workspace settings
 .history/
@@ -124,7 +131,7 @@ wheels/
 *.uvprojx
 
 # ------------------------------------------------------------------------------
-# 5. OS & System Junk Files
+# 6. OS & System Junk Files
 # ------------------------------------------------------------------------------
 .DS_Store
 .DS_Store?
@@ -138,4 +145,3 @@ desktop.ini
 *.bak
 *.swp
 *.swo
- 

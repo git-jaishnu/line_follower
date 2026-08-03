@@ -11,6 +11,20 @@ Included in this repository is a custom desktop GUI application ([`pid_tuner.py`
 
 ---
 
+## 📑 Detailed Module Documentation Links
+
+- 📊 [**Modular Sensor Module Architecture (`docs/sensor_module.md`)**](docs/sensor_module.md)
+- 📡 [**Main System Architecture & Control Loop Logic (`docs/main.md`)**](docs/main.md)
+- ⚡ [**Motor Control & Battery Voltage Compensation (`docs/motor.md`)**](docs/motor.md)
+- 🖥️ [**Python PID Tuner Dashboard Guide & Protocol (`docs/pid_tuner.md`)**](docs/pid_tuner.md)
+- 📶 [**Bluetooth Communication Module (`docs/bluetooth.md`)**](docs/bluetooth.md)
+- 🛠️ [**Utility Helpers & Voltage Conversion Math (`docs/utils.md`)**](docs/utils.md)
+- 📚 [**Documentation Index (`docs/README.md`)**](docs/README.md)
+
+
+
+---
+
 ## 🌟 Key Features & Highlights
 
 - **⚡ Zero-CPU-Overhead Sensor Acquisition**: Uses STM32 ADC1 in continuous multi-channel scan mode paired with DMA2 Stream 0 to transfer 12-bit sensor data into RAM asynchronously.
@@ -227,17 +241,19 @@ line_follower/
 
 ---
 
-## 📑 Detailed Module Documentation Links
 
-- 📊 [**Modular Sensor Module Architecture (`docs/sensor_module.md`)**](docs/sensor_module.md)
-- 📡 [**Main System Architecture & Control Loop Logic (`docs/main.md`)**](docs/main.md)
-- ⚡ [**Motor Control & Battery Voltage Compensation (`docs/motor.md`)**](docs/motor.md)
-- 🖥️ [**Python PID Tuner Dashboard Guide & Protocol (`docs/pid_tuner.md`)**](docs/pid_tuner.md)
-- 📶 [**Bluetooth Communication Module (`docs/bluetooth.md`)**](docs/bluetooth.md)
-- 🛠️ [**Utility Helpers & Voltage Conversion Math (`docs/utils.md`)**](docs/utils.md)
-- 📚 [**Documentation Index (`docs/README.md`)**](docs/README.md)
+### Future Improvements:
+
+1. **Lighter Body**: Heavy body due to it being PCB created a speed bottleneck.
+2. **Smaller Battery**: High mAh not required for competitions.
+3. **Suction Technology** : Using a fan to increase downforce.
+4. **Better Wheels** : To improve turning.
+5. **Better Isolation/Protection** : Prevent component damage.
+6. **Better Array Design**
 
 ---
+
+
 
 ## 📜 License
 

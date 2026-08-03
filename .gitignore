@@ -61,6 +61,7 @@ build/
 bin/
 obj/
 out/
+Drivers/
 
 # Compiled binaries, object files, and symbols
 *.elf
